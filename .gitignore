@@ -1,0 +1,33 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+dist
+out
+*.tsbuildinfo
+
+# Logs
+*.log
+logs
+*.ndjson
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea
+
+# Electron
+app.asar
+
+# Temporary assets (keep source files, ignore generated previews)
+tmp
+*.contact-sheet.png
+*.motion-preview.*
+
+# User-specific Kimi configs (we provide install scripts instead)
+.kimi/config.toml
+.kimi-code/config.toml

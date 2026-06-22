@@ -1,0 +1,18 @@
+{
+  "name": "kimi-pet",
+  "version": "0.1.0",
+  "description": "Kimi Pet companion workflow and MCP tools.",
+  "skills": "./skills/",
+  "mcpServers": {
+    "kimi-pet": {
+      "command": "node",
+      "args": [
+        "<PROJECT_ROOT>/packages/kimi-mcp-server/dist/cli.js"
+      ]
+    }
+  },
+  "interface": {
+    "displayName": "Kimi Pet",
+    "shortDescription": "Desktop pet companion for Kimi Code."
+  }
+}

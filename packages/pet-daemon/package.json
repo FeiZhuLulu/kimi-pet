@@ -1,0 +1,34 @@
+{
+  "name": "@kimi-pet/pet-daemon",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "kimi-pet-daemon": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc && node dist/cli.js",
+    "start": "node dist/cli.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@kimi-pet/pet-assets": "workspace:*",
+    "@kimi-pet/pet-core": "workspace:*",
+    "@kimi-pet/shared-types": "workspace:*",
+    "ws": "^8.17.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/ws": "^8.5.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}

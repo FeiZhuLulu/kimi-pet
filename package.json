@@ -1,0 +1,25 @@
+{
+  "name": "kimi-pet",
+  "version": "0.1.0",
+  "description": "Kimi Code desktop pet system",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:daemon": "pnpm --filter pet-daemon dev",
+    "build": "pnpm -r build",
+    "test": "node ./node_modules/.pnpm/vitest@1.6.1_@types+node@20.19.43/node_modules/vitest/vitest.mjs run -r packages",
+    "compose:kimi-robot": "node scripts/compose-kimi-robot.mjs",
+    "validate:petpack": "node scripts/validate-petpack.mjs",
+    "install:hooks": "node scripts/install-hooks.mjs",
+    "uninstall:hooks": "node scripts/uninstall-hooks.mjs",
+    "install:slash-command": "node scripts/install-slash-command.mjs",
+    "uninstall:slash-command": "node scripts/uninstall-slash-command.mjs",
+    "install:plugin": "node scripts/install-plugin.mjs",
+    "uninstall:plugin": "node scripts/uninstall-plugin.mjs",
+    "install:all": "node scripts/install-all.mjs",
+    "start:pet": "node scripts/start-pet.mjs"
+  },
+  "keywords": ["kimi", "pet", "desktop-pet", "coding-agent"],
+  "license": "MIT",
+  "packageManager": "pnpm@11.8.0"
+}

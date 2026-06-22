@@ -1,0 +1,91 @@
+{
+  "name": "kimi-pet-vscode",
+  "displayName": "Kimi Pet",
+  "description": "Desktop pet companion for Kimi Code",
+  "version": "0.1.0",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.70.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "extensionDependencies": [
+    "moonshot-ai.kimi-code"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "kimiPet.show",
+        "title": "Kimi Pet: Show",
+        "icon": "$(play)"
+      },
+      {
+        "command": "kimiPet.hide",
+        "title": "Kimi Pet: Hide"
+      },
+      {
+        "command": "kimiPet.startDaemon",
+        "title": "Kimi Pet: Start Daemon"
+      },
+      {
+        "command": "kimiPet.installHooks",
+        "title": "Kimi Pet: Install Kimi Hooks"
+      },
+      {
+        "command": "kimiPet.launchDesktop",
+        "title": "Kimi Pet: Launch Desktop Pet"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "kimi-pet",
+          "title": "Kimi Pet",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "kimi-pet": [
+        {
+          "type": "webview",
+          "id": "kimiPetView",
+          "name": "Pet",
+          "contextualTitle": "Kimi Pet"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Kimi Pet",
+      "properties": {
+        "kimiPet.daemonPort": {
+          "type": "number",
+          "default": 17373
+        },
+        "kimiPet.petPackPath": {
+          "type": "string",
+          "default": ""
+        },
+        "kimiPet.projectRoot": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to the cloned kimi-pet repository. Auto-detected from the extension location when empty."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.70.0",
+    "typescript": "^5.4.0"
+  }
+}

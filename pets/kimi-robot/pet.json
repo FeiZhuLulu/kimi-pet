@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "kimi-pet.v0",
+  "id": "kimi-robot",
+  "displayName": "Kimi Robot",
+  "asset": {
+    "type": "spritesheet",
+    "path": "spritesheet.webp",
+    "cellWidth": 256,
+    "cellHeight": 256,
+    "columns": 8,
+    "rows": 8
+  },
+  "animations": {
+    "idle": {
+      "row": 0,
+      "frames": 6,
+      "fps": 6,
+      "loop": true
+    },
+    "thinking": {
+      "row": 1,
+      "frames": 6,
+      "fps": 8,
+      "loop": true
+    },
+    "tool_use": {
+      "row": 2,
+      "frames": 8,
+      "fps": 8,
+      "loop": true
+    },
+    "editing": {
+      "row": 3,
+      "frames": 8,
+      "fps": 10,
+      "loop": true
+    },
+    "terminal": {
+      "row": 4,
+      "frames": 8,
+      "fps": 8,
+      "loop": true
+    },
+    "waiting_approval": {
+      "row": 5,
+      "frames": 6,
+      "fps": 6,
+      "loop": true
+    },
+    "success": {
+      "row": 6,
+      "frames": 6,
+      "fps": 8,
+      "loop": false,
+      "next": "idle"
+    },
+    "error": {
+      "row": 7,
+      "frames": 6,
+      "fps": 6,
+      "loop": false,
+      "next": "idle"
+    }
+  }
+}
