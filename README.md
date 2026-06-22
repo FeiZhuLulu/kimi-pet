@@ -23,10 +23,17 @@
 ```bash
 git clone https://github.com/FeiZhuLulu/kimi-pet.git
 cd kimi-pet
+corepack enable
 node scripts/install-all.mjs
 ```
 
-`install-all` 会：装依赖 → build → 注册 Kimi hooks → 注册 `/pet` slash command → 注册 Kimi Code plugin。执行前会打印计划并要求 y/N 确认；非交互场景（CI / 自动化）请加 `--yes` 或 `-y` 跳过确认。
+`install-all` 会：装依赖 → build → 注册 Kimi hooks → 注册 `/pet` slash command → 注册 Kimi Code plugin。执行前会打印计划并要求 y/N 确认。
+
+非交互场景（CI / 自动化）跳过确认：
+
+```bash
+node scripts/install-all.mjs --yes
+```
 
 ### 手动安装
 
