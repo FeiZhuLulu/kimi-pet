@@ -14,42 +14,74 @@ A transparent, always-on-top desktop pet for [Kimi Code](https://kimi.moonshot.c
 - **MCP server** — expose `pet_set_state`, `pet_say`, `pet_notify` tools
 - **`/pet` slash command** — launch the daemon + desktop pet from Kimi Code chat
 
-## Quick Start
+## 安装
 
-### Requirements
+要求：Node.js 20+、pnpm 8+（或用 `corepack pnpm`）、Kimi Code（CLI 或 VS Code 插件）。Windows / macOS / Linux 均可。
 
-- Node.js 20+
-- pnpm 8+ (or use `corepack pnpm`)
-- Windows / macOS / Linux (Electron desktop; web preview works everywhere)
-
-### One-shot install
+### 快速安装（推荐）
 
 ```bash
-# Clone the repo
-git clone https://github.com/yourname/kimi-pet.git
+git clone https://github.com/FeiZhuLulu/kimi-pet.git
 cd kimi-pet
-
-# Install deps, build, and register hooks + /pet command
 node scripts/install-all.mjs
 ```
 
-### Launch the pet
+`install-all` 会：装依赖 → build → 注册 Kimi hooks → 注册 `/pet` slash command → 注册 Kimi Code plugin。执行前会打印计划并要求 y/N 确认；非交互场景（CI / 自动化）请加 `--yes` 或 `-y` 跳过确认。
 
-In **Kimi Code chat** (CLI or VS Code extension), type:
+### 手动安装
+
+```bash
+git clone https://github.com/FeiZhuLulu/kimi-pet.git
+cd kimi-pet
+corepack enable
+corepack pnpm install
+corepack pnpm build
+node scripts/install-hooks.mjs
+node scripts/install-slash-command.mjs
+node scripts/install-plugin.mjs
+```
+
+适合 CI 流水线或需要分步调试的场景。
+
+## 启动
+
+在 Kimi Code 聊天（CLI 或 VS Code 插件）输入：
 
 ```text
 /pet
 ```
 
-Or run the launcher directly:
+或在终端运行：
 
 ```bash
 node scripts/start-pet.mjs
 ```
 
-In VS Code you can also run the command **Kimi Pet: Launch Desktop Pet** from the Command Palette (`Ctrl+Shift+P`).
+VS Code 用户也可在命令面板（`Ctrl+Shift+P`）执行 **Kimi Pet: Launch Desktop Pet**。
 
-The script starts the daemon (if needed) on port `17373` and opens the desktop pet window.
+脚本会按需启动 daemon（默认端口 `17373`）并打开 Electron 透明桌宠窗口。
+
+## 验证安装
+
+```bash
+node scripts/doctor.mjs
+```
+
+doctor 会逐项检查 Node / pnpm / petpack / dist 产物 / 17373 端口 / Kimi config / hooks / `/pet` 命令，输出三档：
+
+- `[OK]` — 通过
+- `[WARN]` — 提示性（不影响退出码）
+- `[FAIL]` — 必须修复（退出码 1）
+
+每项失败都会给出对应修复命令。
+
+## 卸载
+
+```bash
+node scripts/uninstall-hooks.mjs
+node scripts/uninstall-slash-command.mjs
+node scripts/uninstall-plugin.mjs
+```
 
 ## How It Works
 
