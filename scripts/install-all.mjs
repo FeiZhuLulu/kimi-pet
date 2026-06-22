@@ -53,6 +53,27 @@ async function findPnpm() {
 }
 
 async function main() {
+  console.log("\nThe following will be executed:");
+  console.log("  run:    corepack pnpm install (or skip if node_modules exists)");
+  console.log("  run:    corepack pnpm -r build");
+  console.log("  modify: ~/.kimi/config.toml and/or ~/.kimi-code/config.toml (hooks)");
+  console.log("  modify: ~/.kimi/commands/pet.md and/or ~/.kimi-code/commands/pet.md (/pet)");
+  console.log("  modify: Kimi Code plugin registration");
+  console.log("");
+  if (!process.argv.includes("--yes") && !process.argv.includes("-y")) {
+    const { createInterface } = await import("node:readline/promises");
+    const rl = createInterface({ input: process.stdin, output: process.stdout });
+    try {
+      const ans = (await rl.question("Continue? [y/N] ")).trim().toLowerCase();
+      if (ans !== "y" && ans !== "yes") {
+        console.log("Aborted. Re-run with --yes to skip this prompt.");
+        return;
+      }
+    } finally {
+      rl.close();
+    }
+  }
+
   const nodeModules = path.join(PROJECT_ROOT, "node_modules");
   const alreadyInstalled = await fs.access(nodeModules).then(() => true).catch(() => false);
 
