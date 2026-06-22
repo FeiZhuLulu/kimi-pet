@@ -167,6 +167,64 @@ Replace or extend these files and restart the daemon. Use `scripts/validate-petp
 
 See [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) for common issues (Electron download, `/pet` not appearing, daemon port conflicts).
 
+### 国内镜像
+
+在国内网络下，Electron 二进制与 pnpm 注册表可能很慢或失败。先设置镜像再安装。
+
+PowerShell：
+
+```powershell
+$env:ELECTRON_MIRROR="https://npmmirror.com/mirrors/electron/"
+$env:npm_config_electron_mirror="https://npmmirror.com/mirrors/electron/"
+pnpm config set registry https://registry.npmmirror.com
+pnpm install
+```
+
+CMD：
+
+```bat
+set ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/
+set npm_config_electron_mirror=https://npmmirror.com/mirrors/electron/
+pnpm config set registry https://registry.npmmirror.com
+pnpm install
+```
+
+macOS / Linux：
+
+```bash
+export ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/
+export npm_config_electron_mirror=https://npmmirror.com/mirrors/electron/
+pnpm config set registry https://registry.npmmirror.com
+pnpm install
+```
+
+恢复官方源：
+
+```powershell
+Remove-Item Env:ELECTRON_MIRROR -ErrorAction SilentlyContinue
+Remove-Item Env:npm_config_electron_mirror -ErrorAction SilentlyContinue
+pnpm config set registry https://registry.npmjs.org
+```
+
+```bat
+set ELECTRON_MIRROR=
+set npm_config_electron_mirror=
+pnpm config set registry https://registry.npmjs.org
+```
+
+```bash
+unset ELECTRON_MIRROR npm_config_electron_mirror
+pnpm config set registry https://registry.npmjs.org
+```
+
+### 常见错误
+
+- `doctor` 报 `dist/*.js` 缺失 → 跑 `pnpm build`
+- `pnpm install` 阶段卡住或 Electron 404 → 见上"国内镜像"
+- `doctor` 报端口 17373 被占 → Windows: `netstat -ano | findstr 17373`；macOS / Linux: `lsof -iTCP:17373 -sTCP:LISTEN`，找到 PID 后结束进程
+- `/pet` 在 Kimi 聊天里不出现 → 跑 `install-slash-command.mjs` 后重启 Kimi Code 客户端
+- Kimi config 路径 `~/.kimi/config.toml` 与 `~/.kimi-code/config.toml` 都不存在 → 先启动一次 Kimi Code 客户端或 CLI 让它生成配置目录
+
 ## Roadmap
 
 - [ ] Linux/macOS desktop polish
