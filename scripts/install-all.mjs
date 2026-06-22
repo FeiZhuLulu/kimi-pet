@@ -90,8 +90,9 @@ async function main() {
   try {
     await run(cmd, [...prefix, "-r", "build"]);
   } catch (e) {
-    console.warn("[kimi-pet] Build step failed:", e.message);
-    console.warn("[kimi-pet] If dependencies are already installed, you may ignore this and run 'pnpm build' manually later.");
+    console.error("[kimi-pet] Build step failed:", e.message);
+    console.error("[kimi-pet] Please run 'pnpm build' manually, then re-run install-all.");
+    process.exit(1);
   }
 
   console.log("\n[kimi-pet] Installing Kimi lifecycle hooks...\n");
