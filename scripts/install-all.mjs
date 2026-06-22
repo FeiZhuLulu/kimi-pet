@@ -61,6 +61,10 @@ async function main() {
   console.log("  modify: Kimi Code plugin registration");
   console.log("");
   if (!process.argv.includes("--yes") && !process.argv.includes("-y")) {
+    if (!process.stdout.isTTY) {
+      console.error("Non-interactive shell detected. Re-run with --yes to install.");
+      process.exit(1);
+    }
     const { createInterface } = await import("node:readline/promises");
     const rl = createInterface({ input: process.stdin, output: process.stdout });
     try {
