@@ -9,7 +9,7 @@
 - **实时状态动画** — idle、thinking、tool_use、editing、terminal、waiting_approval、success、error
 - **生命周期 hook 集成** — 通过 `~/.kimi/config.toml` 监听 Kimi Code CLI / VS Code 事件
 - **桌面伴侣** — 无边框、透明、可拖动、可缩放的 Electron 窗口
-- **VS Code 侧边面板** — 可选的 webview 伴侣扩展
+- **VS Code 侧边面板** — 可选的 webview 伴侣扩展（VS Code的kimi兼容性有问题，暂时不可用）
 - **Web 预览** — 浏览器打开 `apps/web-preview` 即可快速演示
 - **MCP 服务器** — 暴露 `pet_set_state`、`pet_say`、`pet_notify` 工具
 - **`/pet` slash 命令** — 在 Kimi Code 聊天里一键启动 daemon + 桌宠
