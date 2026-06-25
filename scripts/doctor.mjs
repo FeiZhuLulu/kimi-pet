@@ -5,17 +5,23 @@
  * Usage: node scripts/doctor.mjs
  *
  * Checks Node, pnpm, petpack files, build dist files, 17373 port,
- * Kimi config, hooks, and /pet command. Exits 0 if no [FAIL],
- * 1 if any [FAIL]. [WARN] is advisory and does not affect exit code.
+ * Kimi config, hooks, /pet command, hook freshness, and hook command targets.
+ *
+ * Exits 0 if no [FAIL], 1 if any [FAIL]. [WARN] is advisory only.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-import { homedir, platform } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  getPrimaryKimiHome,
+  getCandidateKimiHomes,
+  getCandidateConfigPaths,
+  getCandidateCommandPaths,
+} from "./kimi-paths.mjs";
 
 const ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
-const IS_WIN = platform() === "win32";
+const IS_WIN = process.platform === "win32";
 const COLOR = Boolean(process.stdout.isTTY);
 
 const color = (code, s) => (COLOR ? `\x1b[${code}m${s}\x1b[0m` : s);
@@ -43,6 +49,87 @@ const readIfExists = (p) => {
     return null;
   }
 };
+
+// ─── Hook analysis helpers ──────────────────────────────────────
+
+const KIMI_PET_MARKERS = [
+  "kimi-pet-hook",
+  "packages/kimi-hooks-adapter",
+  "kimi-hooks-adapter/dist/cli.js",
+];
+
+function isKimiPetCommand(cmd) {
+  const normalized = cmd.replaceAll("\\", "/");
+  return KIMI_PET_MARKERS.some((m) => normalized.includes(m));
+}
+
+/** Extract all [[hooks]] blocks and inline hooks entries from config text. */
+function extractAllHooks(content) {
+  const hooks = [];
+
+  // [[hooks]] blocks
+  const blockRegex = /\[\[hooks\]\]\s*\n([\s\S]*?)(?=\n\[\[|$)/g;
+  let m;
+  while ((m = blockRegex.exec(content)) !== null) {
+    const block = m[1];
+    const eventM = block.match(/event\s*=\s*"([^"]*)"/);
+    const commandM = block.match(/command\s*=\s*"([^"]*)"/);
+    const timeoutM = block.match(/timeout\s*=\s*(\d+)/);
+    if (eventM) {
+      hooks.push({
+        event: eventM[1],
+        command: commandM ? commandM[1] : "",
+        timeout: timeoutM ? Number(timeoutM[1]) : undefined,
+      });
+    }
+  }
+
+  // Inline hooks = [...]
+  const inlineMatch = content.match(/hooks\s*=\s*\[([\s\S]*?)\]/);
+  if (inlineMatch) {
+    const inner = inlineMatch[1];
+    const entryRegex = /\{([^}]*)\}/g;
+    let e;
+    while ((e = entryRegex.exec(inner)) !== null) {
+      const entry = e[1];
+      const eventM = entry.match(/event\s*=\s*"([^"]*)"/);
+      const commandM = entry.match(/command\s*=\s*"([^"]*)"/);
+      const timeoutM = entry.match(/timeout\s*=\s*(\d+)/);
+      if (eventM) {
+        hooks.push({
+          event: eventM[1],
+          command: commandM ? commandM[1] : "",
+          timeout: timeoutM ? Number(timeoutM[1]) : undefined,
+        });
+      }
+    }
+  }
+
+  return hooks;
+}
+
+function getKimiPetHooks(content) {
+  return extractAllHooks(content).filter((h) => isKimiPetCommand(h.command));
+}
+
+/** Extract file path from a hook command like 'node E:/path/cli.js'. */
+function extractCommandPath(command) {
+  // node "path with spaces"
+  const quoted = command.match(/node\s+["']([^"']+)["']/);
+  if (quoted) return quoted[1].replaceAll("\\", "/");
+  // node path
+  const bare = command.match(/node\s+(\S+)/);
+  if (bare) return bare[1].replaceAll("\\", "/");
+  return null;
+}
+
+// ─── Checks ─────────────────────────────────────────────────────
+
+const REQUIRED_HOOK_EVENTS = [
+  "PermissionRequest",
+  "PermissionResult",
+  "Interrupt",
+];
 
 const checks = [
   {
@@ -156,31 +243,35 @@ const checks = [
   {
     id: "kimi-config",
     run: () => {
-      const paths = [
-        join(homedir(), ".kimi", "config.toml"),
-        join(homedir(), ".kimi-code", "config.toml"),
-      ];
-      const found = paths.find((p) => existsSync(p));
-      if (found) return { level: "ok", message: found };
+      const found = getCandidateConfigPaths().find((p) => existsSync(p));
+      if (found) {
+        const isPrimary = found === join(getPrimaryKimiHome(), "config.toml");
+        return {
+          level: "ok",
+          message: isPrimary ? found : `${found} (legacy)`,
+        };
+      }
       return {
         level: "fail",
         message: "no Kimi config found",
-        fix: "Launch Kimi Code once to generate ~/.kimi/ or ~/.kimi-code/",
+        fix: "Launch Kimi Code CLI once to generate ~/.kimi-code/",
       };
     },
   },
   {
     id: "hooks",
     run: () => {
-      const paths = [
-        join(homedir(), ".kimi", "config.toml"),
-        join(homedir(), ".kimi-code", "config.toml"),
-      ];
-      for (const p of paths) {
-        const content = readIfExists(p);
-        if (content && content.includes("kimi-pet-hook")) {
-          return { level: "ok", message: `kimi-pet hooks in ${p}` };
-        }
+      const found = getCandidateConfigPaths().find((p) => existsSync(p));
+      if (!found) {
+        return {
+          level: "warn",
+          message: "kimi-pet hooks not registered (no config found)",
+          fix: "node scripts/install-hooks.mjs",
+        };
+      }
+      const content = readIfExists(found);
+      if (content && isKimiPetCommand(content)) {
+        return { level: "ok", message: `kimi-pet hooks in ${found}` };
       }
       return {
         level: "warn",
@@ -190,19 +281,125 @@ const checks = [
     },
   },
   {
+    id: "hooks-events",
+    run: () => {
+      const found = getCandidateConfigPaths().find((p) => existsSync(p));
+      if (!found) return { level: "ok", message: "skipped (no config)" };
+      const content = readIfExists(found);
+      if (!content || !isKimiPetCommand(content)) {
+        return { level: "ok", message: "skipped (no kimi-pet hooks)" };
+      }
+      const kpHooks = getKimiPetHooks(content);
+      const registered = new Set(kpHooks.map((h) => h.event));
+      const missing = REQUIRED_HOOK_EVENTS.filter((e) => !registered.has(e));
+      if (missing.length === 0) {
+        return { level: "ok", message: `hook events complete (${registered.size} events)` };
+      }
+      return {
+        level: "warn",
+        message: `hooks outdated: missing ${missing.join(", ")}`,
+        fix: "node scripts/install-hooks.mjs",
+      };
+    },
+  },
+  {
+    id: "hooks-timeout",
+    run: () => {
+      const found = getCandidateConfigPaths().find((p) => existsSync(p));
+      if (!found) return { level: "ok", message: "skipped (no config)" };
+      const content = readIfExists(found);
+      if (!content || !isKimiPetCommand(content)) {
+        return { level: "ok", message: "skipped (no kimi-pet hooks)" };
+      }
+      const kpHooks = getKimiPetHooks(content);
+      const bad = kpHooks.filter((h) => h.timeout !== undefined && h.timeout !== 1);
+      const noTimeout = kpHooks.filter((h) => h.timeout === undefined);
+      if (bad.length === 0 && noTimeout.length === 0) {
+        return { level: "ok", message: "all kimi-pet hooks have timeout = 1" };
+      }
+      const issues = [];
+      if (bad.length > 0) issues.push(`${bad.length} with timeout != 1`);
+      if (noTimeout.length > 0) issues.push(`${noTimeout.length} without timeout`);
+      return {
+        level: "warn",
+        message: `hook timeout: ${issues.join(", ")}`,
+        fix: "node scripts/install-hooks.mjs",
+      };
+    },
+  },
+  {
+    id: "hooks-command",
+    run: () => {
+      const found = getCandidateConfigPaths().find((p) => existsSync(p));
+      if (!found) return { level: "ok", message: "skipped (no config)" };
+      const content = readIfExists(found);
+      if (!content || !isKimiPetCommand(content)) {
+        return { level: "ok", message: "skipped (no kimi-pet hooks)" };
+      }
+      const kpHooks = getKimiPetHooks(content);
+      for (const h of kpHooks) {
+        const cmdPath = extractCommandPath(h.command);
+        if (!cmdPath) {
+          // Bare command like "kimi-pet-hook" — can't verify
+          continue;
+        }
+        if (!existsSync(cmdPath)) {
+          return {
+            level: "fail",
+            message: `hook command target not found: ${cmdPath}`,
+            fix: "pnpm build && node scripts/install-hooks.mjs",
+          };
+        }
+      }
+      return { level: "ok", message: "hook command targets exist" };
+    },
+  },
+  {
     id: "pet-command",
     run: () => {
-      const paths = [
-        join(homedir(), ".kimi", "commands", "pet.md"),
-        join(homedir(), ".kimi-code", "commands", "pet.md"),
-      ];
-      const found = paths.find((p) => existsSync(p));
+      const found = getCandidateCommandPaths().find((p) => existsSync(p));
       if (found) return { level: "ok", message: `/pet at ${found}` };
       return {
         level: "warn",
         message: "/pet command not installed",
         fix: "node scripts/install-slash-command.mjs",
       };
+    },
+  },
+  {
+    id: "petpack",
+    run: () => {
+      const petJson = join(ROOT, "pets/kimi-robot/pet.json");
+      const spritesheet = join(ROOT, "pets/kimi-robot/spritesheet.webp");
+      if (!existsSync(petJson)) {
+        return {
+          level: "fail",
+          message: "default petpack missing (pet.json)",
+          fix: "Check pets/kimi-robot/ directory",
+        };
+      }
+      if (!existsSync(spritesheet)) {
+        return {
+          level: "fail",
+          message: "default petpack missing (spritesheet.webp)",
+          fix: "Check pets/kimi-robot/ directory",
+        };
+      }
+      // Try running validate-petpack.mjs if dist exists
+      const validateScript = join(ROOT, "scripts/validate-petpack.mjs");
+      if (existsSync(validateScript)) {
+        const r = sh(process.execPath, [validateScript]);
+        if (r.ok) {
+          return { level: "ok", message: "default petpack valid" };
+        }
+        return {
+          level: "fail",
+          message: "default petpack validation failed",
+          fix: "node scripts/validate-petpack.mjs",
+        };
+      }
+      // Files exist but can't validate — just OK
+      return { level: "ok", message: "default petpack files present" };
     },
   },
 ];
