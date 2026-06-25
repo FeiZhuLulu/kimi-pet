@@ -7,16 +7,18 @@
 ## 功能特性
 
 - **实时状态动画** — idle、thinking、tool_use、editing、terminal、waiting_approval、success、error
-- **生命周期 hook 集成** — 通过 `~/.kimi/config.toml` 监听 Kimi Code CLI / VS Code 事件
+- **生命周期 hook 集成** — 通过 `~/.kimi/config.toml` 监听 Kimi Code CLI 事件
 - **桌面伴侣** — 无边框、透明、可拖动、可缩放的 Electron 窗口
-- **VS Code 侧边面板** — 可选的 webview 伴侣扩展（VS Code的kimi兼容性有问题，暂时不可用）
 - **Web 预览** — 浏览器打开 `apps/web-preview` 即可快速演示
+- **VS Code 侧边面板** — 🧪 experimental，当前不作为主接入目标（见下方说明）
 - **MCP 服务器** — 暴露 `pet_set_state`、`pet_say`、`pet_notify` 工具
 - **`/pet` slash 命令** — 在 Kimi Code 聊天里一键启动 daemon + 桌宠
 
+> **支持路径说明：** 当前主支持路径是 Kimi Code CLI。VS Code companion 暂为实验功能，不作为主接入目标；由于官方 Kimi Code for VS Code 插件版本较旧，相关适配等官方更新后再继续。
+
 ## 安装
 
-要求：Node.js 20+、pnpm 8+（或用 `corepack pnpm`）、Kimi Code（CLI 或 VS Code 插件）。Windows / macOS / Linux 均可。
+要求：Node.js 20+、pnpm 8+（或用 `corepack pnpm`）、Kimi Code CLI。Windows / macOS / Linux 均可。
 
 ### 快速安装（推荐）
 
@@ -52,7 +54,7 @@ node scripts/install-plugin.mjs
 
 ## 启动
 
-在 Kimi Code 聊天（CLI 或 VS Code 插件）输入：
+在 Kimi Code CLI 聊天输入：
 
 ```text
 /pet
@@ -63,8 +65,6 @@ node scripts/install-plugin.mjs
 ```bash
 node scripts/start-pet.mjs
 ```
-
-VS Code 用户也可在命令面板（`Ctrl+Shift+P`）执行 **Kimi Pet: Launch Desktop Pet**。
 
 脚本会按需启动 daemon（默认端口 `17373`）并打开 Electron 透明桌宠窗口。
 
@@ -93,7 +93,7 @@ node scripts/uninstall-plugin.mjs
 ## 工作原理
 
 ```text
-Kimi Code CLI / VS Code
+Kimi Code CLI
         │
         ▼
   lifecycle hooks
@@ -105,7 +105,6 @@ Kimi Code CLI / VS Code
     pet-daemon  ◀───────  MCP 工具 / 手动事件
         │
         ├──▶  桌面 Electron 窗口
-        ├──▶  VS Code 伴侣 webview
         └──▶  Web 预览
 ```
 
@@ -117,7 +116,7 @@ Kimi Code CLI / VS Code
 kimi-pet/
 ├── apps/
 │   ├── desktop/            # Electron 透明桌宠窗口
-│   ├── vscode-companion/   # VS Code 扩展面板
+│   ├── vscode-companion/   # VS Code 扩展面板（⏸️ 搁置）
 │   └── web-preview/        # 浏览器演示
 ├── packages/
 │   ├── pet-core/           # 状态机 + Kimi 事件映射
@@ -236,8 +235,13 @@ pnpm config set registry https://registry.npmjs.org
 
 - [ ] Linux / macOS 桌面体验打磨
 - [ ] 更多内置桌宠
-- [ ] Kimi Code 扩展原生 `/pet` slash 命令（VS Code chat API）
 - [ ] 打包安装器 / GitHub Releases
+
+### Experimental — 等待 Kimi 更新 VS Code 插件后恢复
+
+- [ ] Kimi Code 扩展原生 `/pet` slash 命令（VS Code chat API）
+- [ ] VS Code 伴侣扩展（vscode-companion）恢复开发
+- [ ] kimi-wrapper 恢复开发
 
 ## 许可证
 
