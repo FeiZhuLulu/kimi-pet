@@ -105,7 +105,7 @@ async function installTo(configPath, hookCommand) {
   const cleaned = removeHooksBlock(text);
 
   const newHooks = HOOK_EVENTS.map(
-    (event) => `  { event = "${event}", command = "${hookCommand}" }`
+    (event) => `  { event = "${event}", command = "${hookCommand}", timeout = 1 }`
   ).join(",\n");
   const newHooksBlock = `hooks = [\n${newHooks}\n]`;
 
