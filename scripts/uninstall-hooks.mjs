@@ -1,64 +1,17 @@
 #!/usr/bin/env node
-import fs from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
-
-const HOME = os.homedir();
-const CONFIG_PATHS = [
-  path.join(HOME, ".kimi", "config.toml"),
-  path.join(HOME, ".kimi-code", "config.toml"),
-];
-
-async function readConfig(configPath) {
-  try {
-    return await fs.readFile(configPath, "utf-8");
-  } catch (e) {
-    if ((e).code === "ENOENT") return "";
-    throw e;
-  }
-}
-
-function removeHooksBlock(text) {
-  const lines = text.split("\n");
-  const result = [];
-  let inInlineHooks = false;
-  let inArrayHooks = false;
-  let bracketDepth = 0;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    if (/^\s*hooks\s*=\s*\[\s*$/.test(line)) {
-      inInlineHooks = true;
-      bracketDepth = 1;
-      continue;
-    }
-    if (inInlineHooks) {
-      bracketDepth += (line.match(/\[/g) || []).length;
-      bracketDepth -= (line.match(/\]/g) || []).length;
-      if (bracketDepth <= 0) {
-        inInlineHooks = false;
-      }
-      continue;
-    }
-
-    if (/^\s*\[\[hooks\]\]\s*$/.test(line)) {
-      inArrayHooks = true;
-      continue;
-    }
-    if (inArrayHooks) {
-      if (/^\s*\[/.test(line) && !/^\s*\[\[hooks\]\]\s*$/.test(line)) {
-        inArrayHooks = false;
-        result.push(line);
-      }
-      continue;
-    }
-
-    result.push(line);
-  }
-
-  return result.join("\n").replace(/\n{3,}/g, "\n\n").trim();
-}
+/**
+ * Remove kimi-pet lifecycle hooks from Kimi Code's config.toml.
+ *
+ * Only kimi-pet hooks are removed — any user-defined hooks are preserved.
+ * A backup is created before any modification.
+ */
+import {
+  CONFIG_PATHS,
+  readConfig,
+  writeConfig,
+  writeBackup,
+  removeKimiPetHooks,
+} from "./hooks-utils.mjs";
 
 async function uninstallFrom(configPath) {
   const text = await readConfig(configPath);
@@ -66,10 +19,15 @@ async function uninstallFrom(configPath) {
     console.log(`Config not found, skipping: ${configPath}`);
     return;
   }
-  const cleaned = removeHooksBlock(text);
-  const newConfig = cleaned ? `${cleaned}\n\nhooks = []\n` : `hooks = []\n`;
-  await fs.writeFile(configPath, newConfig);
+
+  await writeBackup(configPath, text);
+
+  const { text: cleaned } = removeKimiPetHooks(text);
+
+  await writeConfig(configPath, cleaned);
+
   console.log(`Removed Kimi Pet hooks from ${configPath}`);
+  console.log(`Backup saved to ${configPath}.kimi-pet.bak`);
 }
 
 async function main() {

@@ -1,13 +1,21 @@
 #!/usr/bin/env node
+/**
+ * Install kimi-pet lifecycle hooks into Kimi Code's config.toml.
+ *
+ * Only kimi-pet hooks are touched — any user-defined hooks are preserved.
+ * The existing hooks format (inline vs block) is maintained.
+ */
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
-
-const HOME = os.homedir();
-const CONFIG_PATHS = [
-  path.join(HOME, ".kimi", "config.toml"),
-  path.join(HOME, ".kimi-code", "config.toml"),
-];
+import {
+  CONFIG_PATHS,
+  HOME,
+  readConfig,
+  writeConfig,
+  writeBackup,
+  removeKimiPetHooks,
+  buildKimiPetHooks,
+} from "./hooks-utils.mjs";
 
 const HOOK_EVENTS = [
   "SessionStart",
@@ -45,78 +53,26 @@ async function findHookCommand() {
   return "kimi-pet-hook";
 }
 
-async function readConfig(configPath) {
-  try {
-    return await fs.readFile(configPath, "utf-8");
-  } catch (e) {
-    if ((e).code === "ENOENT") return "";
-    throw e;
-  }
-}
-
-function removeHooksBlock(text) {
-  const lines = text.split("\n");
-  const result = [];
-  let inInlineHooks = false;
-  let inArrayHooks = false;
-  let bracketDepth = 0;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    // Remove inline hooks = [ ... ]
-    if (/^\s*hooks\s*=\s*\[\s*$/.test(line)) {
-      inInlineHooks = true;
-      bracketDepth = 1;
-      continue;
-    }
-    if (inInlineHooks) {
-      bracketDepth += (line.match(/\[/g) || []).length;
-      bracketDepth -= (line.match(/\]/g) || []).length;
-      if (bracketDepth <= 0) {
-        inInlineHooks = false;
-      }
-      continue;
-    }
-
-    // Remove [[hooks]] array-of-tables
-    if (/^\s*\[\[hooks\]\]\s*$/.test(line)) {
-      inArrayHooks = true;
-      continue;
-    }
-    if (inArrayHooks) {
-      // Stop at next section header or non-hook key
-      if (/^\s*\[/.test(line) && !/^\s*\[\[hooks\]\]\s*$/.test(line)) {
-        inArrayHooks = false;
-        result.push(line);
-      }
-      continue;
-    }
-
-    result.push(line);
-  }
-
-  return result.join("\n").replace(/\n{3,}/g, "\n\n").trim();
-}
-
 async function installTo(configPath, hookCommand) {
-  const backupPath = `${configPath}.kimi-pet.bak`;
   const text = await readConfig(configPath);
-  const cleaned = removeHooksBlock(text);
 
-  const newHooks = HOOK_EVENTS.map(
-    (event) => `  { event = "${event}", command = "${hookCommand}", timeout = 1 }`
-  ).join(",\n");
-  const newHooksBlock = `hooks = [\n${newHooks}\n]`;
+  // Remove only kimi-pet hooks; preserve user hooks; detect format
+  const { text: cleaned, format } = removeKimiPetHooks(text);
 
+  // Choose output format: match existing, or default to "block" for new configs
+  const outputFormat = format === "inline" ? "inline" : "block";
+
+  // Build new kimi-pet hooks in the appropriate format
+  const newHooksBlock = buildKimiPetHooks(outputFormat, HOOK_EVENTS, hookCommand);
+
+  // Combine: kimi-pet hooks first, then the rest of the config
   const newConfig = cleaned ? `${newHooksBlock}\n\n${cleaned}` : newHooksBlock;
 
-  await fs.mkdir(path.dirname(configPath), { recursive: true });
-  await fs.writeFile(backupPath, text);
-  await fs.writeFile(configPath, newConfig + "\n");
+  await writeBackup(configPath, text);
+  await writeConfig(configPath, newConfig);
 
   console.log(`Installed Kimi Pet hooks to ${configPath}`);
-  console.log(`Backup saved to ${backupPath}`);
+  console.log(`Backup saved to ${configPath}.kimi-pet.bak`);
 }
 
 async function main() {
