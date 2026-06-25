@@ -132,11 +132,15 @@ export class PetDaemon {
       this.recentEvents = this.recentEvents.slice(-max);
     }
 
+    // Clear any pending autoNext timers — a new event supersedes them
+    for (const timer of this.timers.values()) clearTimeout(timer);
+    this.timers.clear();
+
     const result = this.stateMachine.transition(event);
     this.broadcastState();
 
     if (result.autoNext) {
-      this.scheduleAutoNext(result.autoNext.state, result.autoNext.delayMs);
+      this.scheduleAutoNext(result.autoNext.state, result.autoNext.delayMs, result.epoch!);
     }
   }
 
@@ -145,13 +149,16 @@ export class PetDaemon {
     this.broadcastState();
   }
 
-  private scheduleAutoNext(state: PetState, delayMs: number): void {
+  private scheduleAutoNext(state: PetState, delayMs: number, epoch: number): void {
     const existing = this.timers.get(state);
     if (existing) clearTimeout(existing);
 
     const timer = setTimeout(() => {
-      this.stateMachine.setState(state);
-      this.broadcastState();
+      // Only apply if no newer transition has occurred
+      if (this.stateMachine.getEpoch() === epoch) {
+        this.stateMachine.setState(state);
+        this.broadcastState();
+      }
       this.timers.delete(state);
     }, delayMs);
 
