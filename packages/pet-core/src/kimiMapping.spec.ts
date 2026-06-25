@@ -55,6 +55,18 @@ describe("mapKimiEventToState", () => {
     expect(mapKimiEventToState(event("Stop"))).toBe("success");
   });
 
+  it("PermissionRequest -> waiting_approval", () => {
+    expect(mapKimiEventToState(event("PermissionRequest"))).toBe("waiting_approval");
+  });
+
+  it("PermissionResult -> thinking", () => {
+    expect(mapKimiEventToState(event("PermissionResult"))).toBe("thinking");
+  });
+
+  it("Interrupt -> error", () => {
+    expect(mapKimiEventToState(event("Interrupt"))).toBe("error");
+  });
+
   it("explicit event.state wins", () => {
     expect(mapKimiEventToState(event("unknown", { state: "error" }))).toBe("error");
   });

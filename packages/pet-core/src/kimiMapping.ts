@@ -69,6 +69,15 @@ export function mapKimiEventToState(event: PetEvent): PetState {
     case "StopFailure":
       return "error";
 
+    case "PermissionRequest":
+      return "waiting_approval";
+
+    case "PermissionResult":
+      return "thinking";
+
+    case "Interrupt":
+      return "error";
+
     case "wrapper.start":
       return "idle";
 

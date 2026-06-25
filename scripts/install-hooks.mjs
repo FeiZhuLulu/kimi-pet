@@ -23,6 +23,9 @@ const HOOK_EVENTS = [
   "Stop",
   "StopFailure",
   "Notification",
+  "PermissionRequest",
+  "PermissionResult",
+  "Interrupt",
 ];
 
 async function findHookCommand() {
