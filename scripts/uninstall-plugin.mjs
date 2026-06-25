@@ -1,15 +1,12 @@
 #!/usr/bin/env node
+/**
+ * Remove the Kimi Pet plugin from all candidate Kimi homes.
+ */
 import fs from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
-
-const TARGETS = [
-  path.join(os.homedir(), ".kimi", "plugins", "kimi-pet"),
-  path.join(os.homedir(), ".kimi-code", "plugins", "kimi-pet"),
-];
+import { getCandidatePluginDirs } from "./kimi-paths.mjs";
 
 async function main() {
-  for (const target of TARGETS) {
+  for (const target of getCandidatePluginDirs()) {
     try {
       await fs.rm(target, { recursive: true, force: true });
       console.log(`Removed ${target}`);

@@ -7,7 +7,7 @@
 ## 功能特性
 
 - **实时状态动画** — idle、thinking、tool_use、editing、terminal、waiting_approval、success、error
-- **生命周期 hook 集成** — 通过 `~/.kimi/config.toml` 监听 Kimi Code CLI 事件
+- **生命周期 hook 集成** — 通过 `~/.kimi-code/config.toml` 监听 Kimi Code CLI 事件
 - **桌面伴侣** — 无边框、透明、可拖动、可缩放的 Electron 窗口
 - **Web 预览** — 浏览器打开 `apps/web-preview` 即可快速演示
 - **VS Code 侧边面板** — 🧪 experimental，当前不作为主接入目标（见下方说明）
@@ -229,7 +229,7 @@ pnpm config set registry https://registry.npmjs.org
 - `pnpm install` 阶段卡住或 Electron 404 → 见上"国内镜像"
 - `doctor` 报端口 17373 被占 → Windows: `netstat -ano | findstr 17373`；macOS / Linux: `lsof -iTCP:17373 -sTCP:LISTEN`，找到 PID 后结束进程
 - `/pet` 在 Kimi 聊天里不出现 → 跑 `install-slash-command.mjs` 后重启 Kimi Code 客户端
-- Kimi config 路径 `~/.kimi/config.toml` 与 `~/.kimi-code/config.toml` 都不存在 → 先启动一次 Kimi Code 客户端或 CLI 让它生成配置目录
+- Kimi config 路径 `~/.kimi-code/config.toml`（或 `$KIMI_CODE_HOME/config.toml`）不存在 → 先启动一次 Kimi Code CLI 让它生成配置目录
 
 ## 路线图
 

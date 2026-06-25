@@ -16,6 +16,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { getPrimaryKimiHome } from "./kimi-paths.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, "..");
@@ -53,12 +54,13 @@ async function findPnpm() {
 }
 
 async function main() {
+  const kimiHome = getPrimaryKimiHome();
   console.log("\nThe following will be executed:");
   console.log("  run:    corepack pnpm install (or skip if node_modules exists)");
   console.log("  run:    corepack pnpm -r build");
-  console.log("  modify: ~/.kimi/config.toml and/or ~/.kimi-code/config.toml (hooks)");
-  console.log("  modify: ~/.kimi/commands/pet.md and/or ~/.kimi-code/commands/pet.md (/pet)");
-  console.log("  modify: Kimi Code plugin registration");
+  console.log(`  modify: ${kimiHome}/config.toml (hooks)`);
+  console.log(`  modify: ${kimiHome}/commands/pet.md (/pet)`);
+  console.log(`  modify: ${kimiHome}/plugins/kimi-pet/ (plugin)`);
   console.log("");
   if (!process.argv.includes("--yes") && !process.argv.includes("-y")) {
     if (!process.stdout.isTTY) {

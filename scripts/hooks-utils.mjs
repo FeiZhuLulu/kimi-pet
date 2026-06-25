@@ -11,13 +11,15 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { getPrimaryConfigPath, getCandidateConfigPaths } from "./kimi-paths.mjs";
 
 export const HOME = os.homedir();
 
-export const CONFIG_PATHS = [
-  path.join(HOME, ".kimi", "config.toml"),
-  path.join(HOME, ".kimi-code", "config.toml"),
-];
+/** Config paths for install/uninstall scripts (primary only). */
+export const CONFIG_PATHS = [getPrimaryConfigPath()];
+
+/** Config paths for doctor/diagnostics (all candidates). */
+export const ALL_CONFIG_PATHS = getCandidateConfigPaths();
 
 /** Patterns that identify a kimi-pet hook by its command string. */
 const KIMI_PET_MARKERS = [

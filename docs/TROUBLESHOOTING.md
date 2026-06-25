@@ -3,8 +3,9 @@
 ## `/pet` does not appear in Kimi Code chat
 
 1. Make sure the slash command file exists:
-   - CLI: `~/.kimi/commands/pet.md`
-   - VS Code: `~/.kimi-code/commands/pet.md`
+   - `~/.kimi-code/commands/pet.md` (default)
+   - `$KIMI_CODE_HOME/commands/pet.md` (if `KIMI_CODE_HOME` is set)
+   - Legacy fallback: `~/.kimi/commands/pet.md`
 2. Re-run the installer:
    ```bash
    node scripts/install-slash-command.mjs
@@ -38,7 +39,7 @@ $env:KIMI_PET_PORT="17374"
 node scripts/start-pet.mjs
 ```
 
-Then update `~/.kimi/config.toml` and `~/.kimi-code/config.toml` hook commands to use the same port.
+Then update `~/.kimi-code/config.toml` hook commands to use the same port.
 
 ## Electron binary was manually extracted
 
