@@ -1,10 +1,8 @@
-import type { BrowserWindow as BrowserWindowType, Rectangle } from "electron";
-import { loadSettings, saveSettings, updateDesktopSettings } from "./settings";
-import type { KimiPetSettings } from "./settings";
+import type { BrowserWindow as BrowserWindowType } from "electron";
+import { loadSettings, updateDesktopSettings } from "./settings";
 
-const { app, BrowserWindow, ipcMain, Menu, shell, screen } = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, screen } = require("electron");
 const { exec, spawn } = require("node:child_process");
-const path = require("node:path");
 
 // Keep the transparent pet window alive when occluded by system overlays (e.g. Snipping Tool).
 app.commandLine.appendSwitch("disable-features", "CalculateNativeWinOcclusion");
@@ -116,13 +114,31 @@ function playTemporaryState(state: string, durationMs = 1500) {
 }
 
 function createWindow() {
+  const settings = loadSettings();
+  const { scale, alwaysOnTop, showStateText } = settings.desktop;
+  const { width, height } = getWindowSize(scale, showStateText);
+
+  let winX = settings.desktop.x;
+  let winY = settings.desktop.y;
+  if (
+    typeof winX !== "number" ||
+    typeof winY !== "number" ||
+    !isOnAnyScreen(winX, winY, width, height)
+  ) {
+    const pos = getDefaultPosition(width, height);
+    winX = pos.x;
+    winY = pos.y;
+  }
+
   const win = new BrowserWindow({
-    width: 256,
-    height: 256,
+    x: winX,
+    y: winY,
+    width,
+    height,
     frame: false,
     transparent: true,
     backgroundColor: "#00000000",
-    alwaysOnTop: true,
+    alwaysOnTop,
     skipTaskbar: true,
     resizable: false,
     hasShadow: false,
@@ -138,7 +154,9 @@ function createWindow() {
   mainWindow = win;
 
   // Keep the pet above system overlays (e.g. Snipping Tool) and prevent throttling.
-  win.setAlwaysOnTop(true, "screen-saver");
+  if (alwaysOnTop) {
+    win.setAlwaysOnTop(true, "screen-saver");
+  }
   win.setVisibleOnAllWorkspaces(true);
 
   // Some system overlays can steal topmost status or hide the window. Re-assert periodically.
@@ -150,7 +168,9 @@ function createWindow() {
     if (!win.isVisible()) {
       win.showInactive();
     }
-    win.setAlwaysOnTop(true, "screen-saver");
+    if (loadSettings().desktop.alwaysOnTop) {
+      win.setAlwaysOnTop(true, "screen-saver");
+    }
   }, 2000);
 
   win.on("minimize", (_event: any) => {
@@ -164,7 +184,7 @@ function createWindow() {
 <head>
 <meta charset="UTF-8">
 <style>
-  :root { --scale: 1; }
+  :root { --scale: ${scale}; }
   * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0;
@@ -295,7 +315,7 @@ const bubbleEl = document.getElementById('bubble');
 const resizeHandle = document.getElementById('resize-handle');
 let manifest = null, currentState = 'idle', previousState = 'idle', frame = 0, startTime = 0;
 let bubbleTimer = null;
-let currentScale = 1;
+let currentScale = ${scale};
 
 async function init() {
   try {
@@ -421,6 +441,9 @@ ipcRenderer.on('set-scale', (_ev, scale) => {
   currentScale = scale;
   document.documentElement.style.setProperty('--scale', scale);
 });
+ipcRenderer.on('toggle-state-text', (_ev, visible) => {
+  stateEl.style.display = visible ? '' : 'none';
+});
 
 init();
 </script>
@@ -428,10 +451,42 @@ init();
 </html>`;
 
   win.loadURL("data:text/html;charset=utf-8," + encodeURIComponent(html));
-  win.setPosition(1200, 600);
   win.setIgnoreMouseEvents(false);
 
-  let dragBaseX = 1200, dragBaseY = 600;
+  // Send initial settings to renderer once loaded.
+  win.webContents.on("did-finish-load", () => {
+    win.webContents.send("set-scale", scale);
+    win.webContents.send("toggle-state-text", showStateText);
+  });
+
+  // ─── Position persistence ──────────────────────────────────────
+
+  let savePositionTimer: ReturnType<typeof setTimeout> | null = null;
+  function scheduleSavePosition() {
+    if (savePositionTimer) clearTimeout(savePositionTimer);
+    savePositionTimer = setTimeout(() => {
+      const [x, y] = win.getPosition();
+      updateDesktopSettings({ x, y });
+    }, 500);
+  }
+
+  function resetWindowPosition() {
+    const [w, h] = win.getSize();
+    const pos = getDefaultPosition(w, h);
+    win.setPosition(pos.x, pos.y);
+    updateDesktopSettings({ x: pos.x, y: pos.y });
+  }
+
+  function ensureVisible() {
+    const [w, h] = win.getSize();
+    const [x, y] = win.getPosition();
+    if (!isOnAnyScreen(x, y, w, h)) {
+      resetWindowPosition();
+    }
+  }
+
+  let dragBaseX = winX;
+  let dragBaseY = winY;
   ipcMain.on("window-drag-start", () => {
     const pos = win.getPosition();
     dragBaseX = pos[0];
@@ -439,27 +494,34 @@ init();
   });
   ipcMain.on("window-drag-move", (_ev: any, dx: number, dy: number) => {
     win.setPosition(dragBaseX + dx, dragBaseY + dy);
+    scheduleSavePosition();
   });
 
-  let resizeBaseScale = 1.0;
+  // ─── Scale (interactive, not yet persisted) ────────────────────
+
+  let currentScale = scale;
+  let resizeBaseScale = currentScale;
   const MIN_SCALE = 0.5, MAX_SCALE = 2.0;
   ipcMain.on("window-resize-start", () => {
     resizeBaseScale = currentScale;
   });
   ipcMain.on("window-resize-move", (_ev: any, dx: number, dy: number) => {
     const delta = (dx + dy) / 2;
-    const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, resizeBaseScale + delta / 400));
-    currentScale = Number(newScale.toFixed(2));
+    currentScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, resizeBaseScale + delta / 400));
+    currentScale = Number(currentScale.toFixed(2));
     const size = Math.round(256 * currentScale);
     win.setSize(size, size);
     win.webContents.send("set-scale", currentScale);
   });
+
+  // ─── Context menu ──────────────────────────────────────────────
 
   ipcMain.on("show-context-menu", () => {
     const stateItem = (state: string) => ({
       label: state,
       click: () => { postState(state); showBubble(`状态: ${state}`); },
     });
+
     const menu = Menu.buildFromTemplate([
       {
         label: "聚焦 Kimi Code CLI",
@@ -493,8 +555,6 @@ init();
     showBubble(text, 2000);
     playTemporaryState("success", 1200);
   });
-
-  let currentScale = 1.0;
 }
 
 app.whenReady().then(createWindow);
