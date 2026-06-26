@@ -127,7 +127,8 @@ kimi-pet/
 │   ├── kimi-wrapper/       # 共享 Kimi 集成辅助
 │   └── shared-types/       # 共享 TypeScript 类型
 ├── pets/
-│   └── kimi-robot/         # 默认 petpack（精灵图 + pet.json）
+│   ├── kimi-robot/         # 默认 petpack（精灵图 + pet.json）
+│   └── kimi-block/         # 程序化 Canvas 蓝色方块机器人 petpack
 ├── scripts/
 │   ├── install-all.mjs           # 一键安装
 │   ├── install-hooks.mjs         # 注册 Kimi hooks
@@ -168,6 +169,52 @@ pnpm validate:petpack
 - `pet.json` — 动画元数据（row、frames、fps、loop、next）
 
 替换或扩展这些文件后重启 daemon。用 `scripts/validate-petpack.mjs` 校验你的修改。
+
+## 内置 petpack
+
+当前仓库包含两套 petpack：
+
+- `pets/kimi-robot/` — 默认 petpack，256×256 8×8 网格。
+- `pets/kimi-block/` — 程序化 Canvas 生成的极简蓝色方块机器人，源文件在 `assets/kimi-block/source/canvas-generator.html`。
+
+### 预览 kimi-block
+
+不改默认的情况下，通过环境变量临时切换：
+
+```powershell
+$env:KIMI_PET_PETPACK="E:\项目库\桌宠项目\pets\kimi-block"
+node scripts/start-pet.mjs
+```
+
+```bash
+# macOS / Linux
+KIMI_PET_PETPACK=/path/to/pets/kimi-block node scripts/start-pet.mjs
+```
+
+### 重新导出 kimi-block 素材
+
+1. 用浏览器打开 `assets/kimi-block/source/canvas-generator.html`。
+2. 切换到「透明背景」模式，下载 `desktop_pet_spritesheet_transparent.png`。
+3. 重命名为 `spritesheet.png`，放到 `assets/kimi-block/dist/`。
+4. 转成 lossless WebP：
+
+```bash
+node -e "import sharp from 'sharp'; await sharp('assets/kimi-block/dist/spritesheet.png').webp({ lossless: true }).toFile('assets/kimi-block/dist/spritesheet.webp')"
+```
+
+5. 复制到 petpack：
+
+```bash
+cp assets/kimi-block/dist/spritesheet.webp pets/kimi-block/spritesheet.webp
+```
+
+6. 校验：
+
+```bash
+node scripts/validate-petpack.mjs pets/kimi-block
+```
+
+> 提示：当前 kimi-pet 的桌面端和 web-preview 没有绿幕抠像，因此 runtime 用的 `spritesheet.webp` 必须是透明背景。如果只有绿幕版，需要先做 chroma key 处理。
 
 ## 故障排查
 
