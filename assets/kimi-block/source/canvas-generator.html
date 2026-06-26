@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>程序化桌宠 Spritesheet 生成器</title>
+  <!-- Tailwind CSS 界面库 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide 图标 -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght=400;500;600&family=Inter:wght=400;500;600;700&display=swap');
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    .code-font {
+      font-family: 'Fira Code', monospace;
+    }
+    /* 网格透明背景指示器 */
+    .transparency-grid {
+      background-image: linear-gradient(45deg, #e2e8f0 25%, transparent 25%), 
+                        linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), 
+                        linear-gradient(45deg, transparent 75%, #e2e8f0 75%), 
+                        linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    }
+    .transparency-grid-dark {
+      background-image: linear-gradient(45deg, #1e293b 25%, transparent 25%), 
+                        linear-gradient(-45deg, #1e293b 25%, transparent 25%), 
+                        linear-gradient(45deg, transparent 75%, #1e293b 75%), 
+                        linear-gradient(-45deg, transparent 75%, #1e293b 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+
+  <!-- 顶部导航 -->
+  <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50 px-6 py-4">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="bg-blue-600 p-2.5 rounded-2xl shadow-lg shadow-blue-500/20 text-white flex items-center justify-center">
+          <i data-lucide="blocks" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+            桌面小宠 Spritesheet 动态生成器
+          </h1>
+          <p class="text-xs text-slate-400">基于数学几何路径确定性绘制，零像素漂移，导出 2048×2048 工业级动画帧</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <button id="btnDownload" class="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium text-sm px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-blue-500/15">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          下载完整 Spritesheet (.png)
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 工作区 -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- 左侧：参数控制器 & 颜色自定义 -->
+    <section class="lg:col-span-3 flex flex-col gap-5">
+      
+      <!-- 调色板 -->
+      <div class="bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-xl">
+        <h2 class="text-sm font-bold text-white mb-4 flex items-center gap-2 border-b border-slate-800 pb-2.5">
+          <i data-lucide="sliders" class="w-4 h-4 text-blue-500"></i>
+          色彩与渲染配置
+        </h2>
+        
+        <div class="space-y-4">
+          <!-- 皮肤颜色 -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1.5 flex justify-between">
+              <span>角色身体颜色</span>
+              <span id="hexSkin" class="text-slate-500 font-mono">#3195FF</span>
+            </label>
+            <div class="flex gap-2">
+              <input type="color" id="colorSkin" value="#3195ff" class="w-10 h-10 rounded-lg cursor-pointer border border-slate-800 bg-transparent">
+              <input type="text" id="textSkin" value="#3195ff" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 text-xs font-mono uppercase focus:outline-none focus:border-blue-500">
+            </div>
+          </div>
+
+          <!-- 眼睛颜色 -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1.5 flex justify-between">
+              <span>眼睛颜色</span>
+              <span id="hexEye" class="text-slate-500 font-mono">#FFFFFF</span>
+            </label>
+            <div class="flex gap-2">
+              <input type="color" id="colorEye" value="#ffffff" class="w-10 h-10 rounded-lg cursor-pointer border border-slate-800 bg-transparent">
+              <input type="text" id="textEye" value="#ffffff" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 text-xs font-mono uppercase focus:outline-none focus:border-blue-500">
+            </div>
+          </div>
+
+          <!-- 背景模式 -->
+          <div class="pt-2 border-t border-slate-800/60">
+            <label class="block text-xs font-semibold text-slate-400 mb-2">背景填充模式</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button id="bgChroma" class="py-2 px-3 text-xs rounded-xl font-medium border border-blue-500 bg-blue-600/10 text-blue-400 transition-all">
+                Chroma 绿幕
+              </button>
+              <button id="bgTransparent" class="py-2 px-3 text-xs rounded-xl font-medium border border-slate-800 bg-slate-900 text-slate-400 hover:text-white transition-all">
+                透明背景
+              </button>
+            </div>
+          </div>
+
+          <!-- 自定义绿幕颜色 -->
+          <div id="chromaColorGroup">
+            <label class="block text-xs font-semibold text-slate-400 mb-1.5 flex justify-between">
+              <span>绿幕色值</span>
+              <span id="hexBg" class="text-slate-500 font-mono">#00FF00</span>
+            </label>
+            <div class="flex gap-2">
+              <input type="color" id="colorBg" value="#00ff00" class="w-10 h-10 rounded-lg cursor-pointer border border-slate-800 bg-transparent">
+              <input type="text" id="textBg" value="#00ff00" class="flex-1 bg-slate-900 border border-slate-800 rounded-lg px-3 text-xs font-mono uppercase focus:outline-none focus:border-blue-500">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 参数微调 -->
+      <div class="bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-xl">
+        <h2 class="text-sm font-bold text-white mb-4 flex items-center gap-2 border-b border-slate-800 pb-2.5">
+          <i data-lucide="gauge" class="w-4 h-4 text-indigo-400"></i>
+          动画速率与预览选项
+        </h2>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1.5 flex justify-between">
+              <span>动画速率 (FPS)</span>
+              <span id="lblFps" class="text-indigo-400 font-mono font-bold">8</span>
+            </label>
+            <input type="range" id="rangeFps" min="2" max="24" value="8" class="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+          </div>
+
+          <div class="flex items-center justify-between pt-2 border-t border-slate-800/60">
+            <span class="text-xs font-semibold text-slate-400">预览辅助定位网格</span>
+            <button id="toggleGrid" class="relative inline-flex h-6 w-11 items-center rounded-full bg-slate-800 transition-all">
+              <span id="toggleGridDot" class="inline-block h-4 w-4 transform rounded-full bg-slate-500 transition-all translate-x-1"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 动画状态总览 -->
+      <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 text-xs text-slate-400 space-y-2">
+        <div class="font-bold text-white flex items-center gap-1.5 mb-1.5">
+          <i data-lucide="film" class="w-4 h-4 text-blue-400"></i>
+          Spritesheet 行分配
+        </div>
+        <div class="space-y-1 font-mono text-2xs">
+          <div class="flex items-center justify-between border-b border-slate-900 pb-1"><span>Row 0: idle</span><span class="text-slate-500">空闲漂浮</span></div>
+          <div class="flex items-center justify-between border-b border-slate-900 pb-1"><span>Row 1: thinking</span><span class="text-slate-500">歪头思考想法云</span></div>
+          <div class="flex items-center justify-between border-b border-slate-900 pb-1"><span>Row 2: tool_use</span><span class="text-slate-500">前倾快速点击</span></div>
+          <div class="flex items-center justify-between border-b border-slate-900 pb-1"><span>Row 3: editing</span><span class="text-slate-500">快速打字横扫</span></div>
+          <div class="flex items-center justify-between border-b border-slate-900 pb-1"><span>Row 4: terminal</span><span class="text-slate-500">高频微颤眨眼&lt;</span></div>
+          <div class="flex items-center justify-between border-b border-slate-900 pb-1"><span>Row 5: waiting</span><span class="text-slate-500">双手持红×与绿√</span></div>
+          <div class="flex items-center justify-between border-b border-slate-900 pb-1"><span>Row 6: success</span><span class="text-slate-500">抛物线弹跳</span></div>
+          <div class="flex items-center justify-between pb-1"><span>Row 7: error</span><span class="text-slate-500">沮丧摆动#号眼</span></div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- 中间：实时状态动画预览 (8种状态) -->
+    <section class="lg:col-span-5 flex flex-col gap-6">
+      
+      <!-- 动作大盘 -->
+      <div class="bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col flex-1">
+        <h2 class="text-sm font-bold text-white mb-4 flex items-center justify-between border-b border-slate-800 pb-2.5">
+          <span class="flex items-center gap-2">
+            <i data-lucide="play-circle" class="w-4.5 h-4.5 text-green-500 animate-pulse"></i>
+            实时动画循环预览 (每帧 256×256)
+          </span>
+          <span class="text-2xs text-slate-500 font-mono">点击任意状态进入行解析</span>
+        </h2>
+
+        <!-- 八个预览卡片网格 -->
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-2 gap-4 flex-1">
+          <!-- 动画卡片模版将由 JS 动态装载 -->
+          <div id="previewsContainer" class="col-span-full grid grid-cols-2 gap-4"></div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- 右侧：全局 Spritesheet 实绘预览 & 帧检查 -->
+    <section class="lg:col-span-4 flex flex-col gap-6">
+      
+      <!-- 帧检视面板 -->
+      <div id="inspectorPanel" class="bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-xl">
+        <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-2.5">
+          <h2 class="text-sm font-bold text-white flex items-center gap-2">
+            <i data-lucide="eye" class="w-4 h-4 text-blue-400"></i>
+            <span id="inspectorTitle">Focused 逐帧检查</span>
+          </h2>
+          <div class="flex items-center gap-1.5">
+            <!-- 新增源码弹窗呼出按钮 -->
+            <button id="btnOpenModal" class="px-2.5 py-1 text-2xs font-semibold bg-slate-900 hover:bg-slate-800 border border-slate-700 text-blue-400 rounded-lg flex items-center gap-1 transition">
+              <i data-lucide="code" class="w-3.5 h-3.5"></i> 源码
+            </button>
+            <span class="px-2 py-0.5 text-3xs font-mono bg-blue-950 border border-blue-800 text-blue-400 rounded-full font-bold">1 × 8 Strip</span>
+          </div>
+        </div>
+        
+        <!-- 八个连环帧排列 -->
+        <div class="grid grid-cols-4 gap-2 mb-2 bg-slate-900 p-2 rounded-xl" id="inspectStripContainer">
+          <!-- 这里动态挂载 8 个 256x256 缩小版的 Canvas -->
+        </div>
+        <p class="text-3xs text-slate-500 leading-relaxed text-center">在这里可以严密监控该行状态的 8 帧是否存在 Baseline 偏移、抖动或死角。</p>
+      </div>
+
+      <!-- Spritesheet 总览 -->
+      <div class="bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-xl flex flex-col">
+        <h2 class="text-sm font-bold text-white mb-3 flex items-center justify-between border-b border-slate-800 pb-2.5">
+          <span class="flex items-center gap-2">
+            <i data-lucide="grid" class="w-4 h-4 text-indigo-400"></i>
+            Spritesheet 缩略总览 (2048×2048)
+          </span>
+          <span class="text-2xs font-mono text-slate-500">Full Texture Canvas</span>
+        </h2>
+
+        <!-- 大贴图预览区域 -->
+        <div class="relative w-full aspect-square border border-slate-800 rounded-xl overflow-hidden shadow-inner flex items-center justify-center p-2 transparency-grid-dark bg-slate-950" id="masterGridIndicator">
+          <!-- 实时绘制的完整大贴图 -->
+          <canvas id="masterCanvas" width="2048" height="2048" class="max-w-full max-h-full rounded shadow-md object-contain transition-transform duration-300 hover:scale-[1.03]"></canvas>
+        </div>
+        <p class="text-3xs text-slate-500 mt-3 text-center">Spritesheet 全图包含 8 行 8 列共 64 个确定性姿态，可直接在游戏引擎、桌宠模拟器中使用。</p>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- 源码查看模态层弹窗 -->
+  <div id="codeModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl flex flex-col overflow-hidden max-h-[85vh] shadow-2xl">
+      <!-- Header -->
+      <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-950">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="code-2" class="w-4 h-4 text-blue-500"></i>
+          当前帧源码导出 (256×256 单元规格)
+        </h3>
+        <button id="btnCloseModal" class="text-slate-400 hover:text-white transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <!-- Tabs -->
+      <div class="bg-slate-950 border-b border-slate-800 flex px-4">
+        <button id="modalTabSvgBtn" class="px-4 py-3 text-xs font-semibold text-blue-400 border-b-2 border-blue-500 transition">
+          SVG 源码
+        </button>
+        <button id="modalTabCanvasBtn" class="px-4 py-3 text-xs font-semibold text-slate-400 hover:text-white border-b-2 border-transparent transition">
+          Canvas JS 绘制代码
+        </button>
+      </div>
+      <!-- Content Area -->
+      <div class="p-6 flex-1 flex flex-col overflow-hidden min-h-[350px]">
+        <!-- SVG Panel -->
+        <div id="modalPanelSvg" class="flex-1 flex flex-col gap-3 h-full">
+          <div class="flex justify-between items-center text-xs text-slate-500">
+            <span>可以直接粘贴并保存为独立的 .svg 矢量文件</span>
+            <button id="btnCopySvg" class="flex items-center gap-1.5 text-blue-400 hover:text-blue-300 font-semibold transition">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i> 复制代码
+            </button>
+          </div>
+          <textarea id="codeSvg" readonly class="flex-1 bg-slate-950 text-slate-200 font-mono text-xs p-4 rounded-xl resize-none focus:outline-none border border-slate-800 h-full min-h-[220px]"></textarea>
+        </div>
+        <!-- Canvas Panel -->
+        <div id="modalPanelCanvas" class="flex-1 flex flex-col gap-3 h-full hidden">
+          <div class="flex justify-between items-center text-xs text-slate-500">
+            <span>使用 HTML5 Canvas 2D 原生命令进行绘制的算法函数</span>
+            <button id="btnCopyCanvas" class="flex items-center gap-1.5 text-blue-400 hover:text-blue-300 font-semibold transition">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i> 复制代码
+            </button>
+          </div>
+          <textarea id="codeCanvas" readonly class="flex-1 bg-slate-950 text-slate-200 font-mono text-xs p-4 rounded-xl resize-none focus:outline-none border border-slate-800 h-full min-h-[220px]"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="bg-slate-950 border-t border-slate-800 py-6 mt-6 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+      <p>© 2026 程序化 Mascot 精灵图工厂. 创作有趣，创意无限。</p>
+      <div class="flex gap-4">
+        <span class="hover:text-slate-400 cursor-pointer">Canvas 2D 数学引擎</span>
+        <span class="hover:text-slate-400 cursor-pointer">确定性骨架</span>
+        <span class="hover:text-slate-400 cursor-pointer">不漂移保障</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 提示消息吐司 -->
+  <div id="toast" class="bg-slate-950 border border-slate-800 text-white px-5 py-3 rounded-2xl text-sm fixed bottom-6 left-1/2 -translate-x-1/2 shadow-2xl flex items-center gap-2 transform translate-y-24 opacity-0 transition-all duration-300 pointer-events-none z-50">
+    <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
+    <span id="toastMsg">成功！</span>
+  </div>
+
+  <script>
+    // 初始化 Lucide 图标
+    lucide.createIcons();
+
+    // 状态常量定义
+    const STATES_META = [
+      { id: 0, name: "idle", label: "0: Idle", desc: "空闲浮动，眨眼" },
+      { id: 1, name: "thinking", label: "1: Thinking", desc: "歪头思考，右上想法云气泡" },
+      { id: 2, name: "tool_use", label: "2: Tool Use", desc: "前倾快速点击" },
+      { id: 3, name: "editing", label: "3: Editing", desc: "快速打字横扫" },
+      { id: 4, name: "terminal", label: "4: Terminal", desc: "高频机械颤抖，眨眼时右眼成<" },
+      { id: 5, name: "waiting_approval", label: "5: Waiting Approval", desc: "前倾期待，手持红色×和绿色√" },
+      { id: 6, name: "success", label: "6: Success", desc: "抛物线大弹跳，举手欢呼" },
+      { id: 7, name: "error", label: "7: Error", desc: "委屈晃动，扁体，井号#混乱眼" }
+    ];
+
+    // 配置参数状态
+    const renderConfig = {
+      bodyColor: "#3195ff",
+      eyeColor: "#ffffff",
+      bgColor: "#00ff00",
+      isTransparent: false,
+      drawGrid: false,
+      fps: 8,
+      activeInspectState: 0
+    };
+
+    // UI 元素引用
+    const colorSkin = document.getElementById('colorSkin');
+    const textSkin = document.getElementById('textSkin');
+    const colorEye = document.getElementById('colorEye');
+    const textEye = document.getElementById('textEye');
+    const colorBg = document.getElementById('colorBg');
+    const textBg = document.getElementById('textBg');
+    const bgChroma = document.getElementById('bgChroma');
+    const bgTransparent = document.getElementById('bgTransparent');
+    const chromaColorGroup = document.getElementById('chromaColorGroup');
+    const rangeFps = document.getElementById('rangeFps');
+    const lblFps = document.getElementById('lblFps');
+    const toggleGrid = document.getElementById('toggleGrid');
+    const toggleGridDot = document.getElementById('toggleGridDot');
+    const masterCanvas = document.getElementById('masterCanvas');
+    const masterGridIndicator = document.getElementById('masterGridIndicator');
+    const btnDownload = document.getElementById('btnDownload');
+    const previewsContainer = document.getElementById('previewsContainer');
+    const inspectStripContainer = document.getElementById('inspectStripContainer');
+    const inspectorTitle = document.getElementById('inspectorTitle');
+
+    // 模态弹窗相关 DOM 引用
+    const codeModal = document.getElementById('codeModal');
+    const btnOpenModal = document.getElementById('btnOpenModal');
+    const btnCloseModal = document.getElementById('btnCloseModal');
+    const modalTabSvgBtn = document.getElementById('modalTabSvgBtn');
+    const modalTabCanvasBtn = document.getElementById('modalTabCanvasBtn');
+    const modalPanelSvg = document.getElementById('modalPanelSvg');
+    const modalPanelCanvas = document.getElementById('modalPanelCanvas');
+    const codeSvg = document.getElementById('codeSvg');
+    const codeCanvas = document.getElementById('codeCanvas');
+    const btnCopySvg = document.getElementById('btnCopySvg');
+    const btnCopyCanvas = document.getElementById('btnCopyCanvas');
+
+    // Toast 消息
+    const toast = document.getElementById('toast');
+    const toastMsg = document.getElementById('toastMsg');
+
+    function showToast(message) {
+      toastMsg.textContent = message;
+      toast.classList.remove('translate-y-24', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-24', 'opacity-0');
+      }, 2500);
+    }
+
+    // 初始化颜色关联
+    function syncColor(picker, input, configKey) {
+      picker.addEventListener('input', (e) => {
+        const val = e.target.value;
+        input.value = val.toUpperCase();
+        renderConfig[configKey] = val;
+        onConfigChanged();
+      });
+      input.addEventListener('input', (e) => {
+        let val = e.target.value;
+        if (val.length === 7 && val.startsWith('#')) {
+          picker.value = val;
+          renderConfig[configKey] = val;
+          onConfigChanged();
+        }
+      });
+    }
+    syncColor(colorSkin, textSkin, 'bodyColor');
+    syncColor(colorEye, textEye, 'eyeColor');
+    syncColor(colorBg, textBg, 'bgColor');
+
+    // 辅助圆角矩形绘制
+    function drawRoundRect(ctx, x, y, width, height, radius) {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // 辅助旋转椭圆绘制
+    function drawEllipse(ctx, cx, cy, rx, ry) {
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+
+    // 辅助绘制井号#眼睛
+    function drawSharpEye(ctx, cx, cy, color) {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 4;
+      ctx.lineCap = "round";
+      const d = 5.5; // 线条偏离中心半距
+      const len = 10; // 线条向外延伸半距
+      ctx.beginPath();
+      // 两条横线
+      ctx.moveTo(cx - len, cy - d);
+      ctx.lineTo(cx + len, cy - d);
+      ctx.moveTo(cx - len, cy + d);
+      ctx.lineTo(cx + len, cy + d);
+      // 两条竖线
+      ctx.moveTo(cx - d, cy - len);
+      ctx.lineTo(cx - d, cy + len);
+      ctx.moveTo(cx + d, cy - len);
+      ctx.lineTo(cx + d, cy + len);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 核心绘制公式：渲染任意动作的任意帧 (256x256 标准视口)
+    function renderPetFrame(ctx, stateId, frameId, config) {
+      const { bodyColor, eyeColor, bgColor, isTransparent, drawGrid } = config;
+
+      // 1. 背景绘制
+      if (!isTransparent) {
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, 256, 256);
+      } else {
+        ctx.clearRect(0, 0, 256, 256);
+      }
+
+      ctx.save();
+
+      // 默认基础人体姿态常数 (精确适配 256×256 分辨率居中分布)
+      let bodyW = 132;
+      let bodyH = 118;
+      let bodyCenterX = 128;
+      let bodyCenterY = 126;
+      let bodyR = 40;
+
+      let eyeS = 22;
+      let eyeR = 6;
+      let eyeCenterY = 115;
+      let eyeSpacing = 48; // 左眼和右眼 X 轴对称差值
+
+      let armRx = 12;
+      let armRy = 15;
+      let armRotL = 25 * Math.PI / 180; // 左手向外垂挂
+      let armRotR = -25 * Math.PI / 180; // 右手向外垂挂
+      let leftArmX = 54;
+      let leftArmY = 142;
+      let rightArmX = 202;
+      let rightArmY = 142;
+
+      let footW = 24;
+      let footH = 22;
+      let footR = 8;
+
+      // 动态运算偏移
+      let leanAngle = 0;
+      let shiftX = 0;
+      let shiftY = 0;
+      let eyeScaleY = 1.0;
+      let lookX = 0;
+      let lookY = 0;
+      let eyeSquish = false;
+      let rightArmCustom = false;
+      let customLeftArm = false;
+
+      // 新特征标志
+      let drawThinkingBubble = false;
+      let bubbleOffsetY = 0;
+      let drawTerminalEyes = false;
+      let isTerminalClosed = false;
+      let drawWaitingSymbols = false;
+      let eyeSharp = false;
+
+      const t = frameId / 8; // 时间归一化量 [0, 0.875]
+
+      switch(stateId) {
+        case 0: // idle: 轻微上下浮动 + 眨眼
+          shiftY = 3.5 * Math.sin(2 * Math.PI * t);
+          if (frameId === 3 || frameId === 4) {
+            eyeScaleY = 0.1; // 极窄的眨眼形态
+          }
+          break;
+
+        case 1: // thinking: 左右倾斜 + 眼睛左右看，头右上角生成思考云气泡
+          leanAngle = 0.08 * Math.sin(2 * Math.PI * t);
+          lookX = 5.5 * Math.sin(2 * Math.PI * t);
+          lookY = -1.5;
+          // 手恢复自然垂挂状态，不托腮
+          drawThinkingBubble = true;
+          bubbleOffsetY = 4 * Math.sin(2 * Math.PI * t);
+          break;
+
+        case 2: // tool_use: 前倾 + 快速手臂点击敲击
+          shiftX = 1.5;
+          shiftY = 1.0;
+          leftArmY += 7.5 * Math.sin(2 * Math.PI * (frameId / 4));
+          rightArmY += 7.5 * Math.cos(2 * Math.PI * (frameId / 4));
+          armRotL = 40 * Math.PI / 180;
+          armRotR = -40 * Math.PI / 180;
+          break;
+
+        case 3: // editing: 极小幅度打字高频抖动 + 眼睛左右横扫
+          shiftX = 2.0 * Math.sin(2 * Math.PI * (frameId / 2));
+          lookX = 7.5 * Math.sin(2 * Math.PI * t);
+          
+          // 模拟左右手快速敲键盘的往复运动
+          customLeftArm = true;
+          leftArmX = bodyCenterX - bodyW / 2 + 10 + 3 * Math.cos(2 * Math.PI * (frameId / 2));
+          leftArmY = bodyCenterY + 24 + 3 * Math.sin(2 * Math.PI * (frameId / 2));
+          armRotL = 72 * Math.PI / 180;
+
+          rightArmCustom = true;
+          rightArmX = bodyCenterX + bodyW / 2 - 10 + 3 * Math.sin(2 * Math.PI * (frameId / 2));
+          rightArmY = bodyCenterY + 24 + 3 * Math.cos(2 * Math.PI * (frameId / 2));
+          armRotR = -72 * Math.PI / 180;
+          break;
+
+        case 4: // terminal: 高频机械颤抖 + 终端眨眼动作，闭上时右眼变成 < 形
+          shiftX = 1.2 * (frameId % 2 === 0 ? 1 : -1);
+          shiftY = 0.8 * (frameId % 3 === 0 ? 1 : -1);
+          drawTerminalEyes = true;
+          isTerminalClosed = (frameId === 3 || frameId === 4); // 这两帧眨眼闭眼
+          break;
+
+        case 5: // waiting_approval: 身体微微前压 + 眼睛大 + 举手分别拿着红×与绿√
+          bodyW = 138;
+          bodyH = 112;
+          bodyCenterY += 4;
+          eyeS = 25; // 变大
+
+          customLeftArm = true;
+          leftArmX = bodyCenterX - bodyW / 2 - 2;
+          leftArmY = bodyCenterY - 14 + 4 * Math.sin(2 * Math.PI * t);
+          armRotL = 145 * Math.PI / 180;
+
+          rightArmCustom = true;
+          rightArmX = bodyCenterX + bodyW / 2 + 2;
+          rightArmY = bodyCenterY - 14 - 4 * Math.sin(2 * Math.PI * t);
+          armRotR = -145 * Math.PI / 180;
+
+          drawWaitingSymbols = true; // 开启拿叉勾标志
+          break;
+
+        case 6: // success: 弹性抛物线大跳跳跃 + 落地弹力回缩 + 举手欢呼
+          const bounce = -24 * Math.sin(Math.PI * (frameId / 7));
+          shiftY = bounce;
+
+          if (frameId === 0 || frameId === 7) {
+            // 着陆回弹
+            bodyW = 142;
+            bodyH = 106;
+          } else {
+            // 空中拉伸
+            const stretch = 0.12 * Math.sin(Math.PI * (frameId / 7));
+            bodyW *= (1 - stretch * 0.5);
+            bodyH *= (1 + stretch);
+          }
+
+          // 举手动作
+          customLeftArm = true;
+          leftArmX = bodyCenterX - bodyW / 2 - 3;
+          leftArmY = bodyCenterY - 12 + 4 * Math.sin(2 * Math.PI * (frameId / 4));
+          armRotL = 152 * Math.PI / 180;
+
+          rightArmCustom = true;
+          rightArmX = bodyCenterX + bodyW / 2 + 3;
+          rightArmY = bodyCenterY - 12 - 4 * Math.sin(2 * Math.PI * (frameId / 4));
+          armRotR = -152 * Math.PI / 180;
+          break;
+
+        case 7: // error: 沮丧地左右摆动 + 身体略微压扁 + 眼睛变成#字
+          shiftX = 14 * Math.sin(2 * Math.PI * t);
+          leanAngle = 0.08 * Math.sin(2 * Math.PI * t);
+          bodyW = 136;
+          bodyH = 108;
+          eyeSharp = true; // 眼睛变成井号
+          
+          // 垂头丧气、手耷拉
+          armRotL = 8 * Math.PI / 180 + 0.08 * Math.sin(2 * Math.PI * (frameId / 2));
+          armRotR = -8 * Math.PI / 180 - 0.08 * Math.sin(2 * Math.PI * (frameId / 2));
+          break;
+      }
+
+      // 执行骨骼偏移
+      bodyCenterX += shiftX;
+      bodyCenterY += shiftY;
+      leftArmX += shiftX;
+      leftArmY += shiftY;
+      rightArmX += shiftX;
+      rightArmY += shiftY;
+
+      // 围绕下盘中点 pivot 旋转（完美保持与脚掌的骨骼连续性）
+      const px = 128;
+      const py = 182;
+      if (leanAngle !== 0) {
+        ctx.translate(px, py);
+        ctx.rotate(leanAngle);
+        ctx.translate(-px, -py);
+      }
+
+      ctx.fillStyle = bodyColor;
+
+      // 2. 绘制左手手臂
+      ctx.save();
+      ctx.translate(leftArmX, leftArmY);
+      ctx.rotate(armRotL);
+      drawEllipse(ctx, 0, 0, armRx, armRy);
+      ctx.restore();
+
+      // 3. 绘制右手手臂
+      ctx.save();
+      ctx.translate(rightArmX, rightArmY);
+      ctx.rotate(armRotR);
+      drawEllipse(ctx, 0, 0, armRx, armRy);
+      ctx.restore();
+
+      // 绘制Waiting状态手里的红叉和绿勾
+      if (drawWaitingSymbols) {
+        // 左手红叉
+        const lSymX = leftArmX;
+        const lSymY = leftArmY - 16;
+        ctx.save();
+        ctx.strokeStyle = "#FF3B30";
+        ctx.lineWidth = 5;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(lSymX - 8, lSymY - 8);
+        ctx.lineTo(lSymX + 8, lSymY + 8);
+        ctx.moveTo(lSymX + 8, lSymY - 8);
+        ctx.lineTo(lSymX - 8, lSymY + 8);
+        ctx.stroke();
+        ctx.restore();
+
+        // 右手绿勾
+        const rSymX = rightArmX;
+        const rSymY = rightArmY - 16;
+        ctx.save();
+        ctx.strokeStyle = "#34C759";
+        ctx.lineWidth = 5;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        ctx.moveTo(rSymX - 8, rSymY);
+        ctx.lineTo(rSymX - 2, rSymY + 6);
+        ctx.lineTo(rSymX + 9, rSymY - 5);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 4. 绘制双脚（智能对齐到身体底边缘，防止悬空漂移）
+      const currentBodyBottom = bodyCenterY + bodyH / 2;
+      const footLeftXLoc = bodyCenterX - 28;
+      const footRightXLoc = bodyCenterX + 28 - footW;
+      const footYLoc = currentBodyBottom - 10;
+
+      drawRoundRect(ctx, footLeftXLoc, footYLoc, footW, footH, footR);
+      drawRoundRect(ctx, footRightXLoc, footYLoc, footW, footH, footR);
+
+      // 5. 绘制身体主体
+      const bodyX = bodyCenterX - bodyW / 2;
+      const bodyY = bodyCenterY - bodyH / 2;
+      drawRoundRect(ctx, bodyX, bodyY, bodyW, bodyH, bodyR);
+
+      // 6. 绘制眼睛
+      ctx.fillStyle = eyeColor;
+      const eyeLeftCenterX = bodyCenterX - eyeSpacing / 2;
+      const eyeRightCenterX = bodyCenterX + eyeSpacing / 2;
+      const finalEyeCenterY = bodyCenterY - (bodyH * 0.08) + lookY; // 锚定身体高度比例
+
+      if (eyeSharp) {
+        // Error 状态: #形眼睛
+        drawSharpEye(ctx, eyeLeftCenterX + lookX, finalEyeCenterY, eyeColor);
+        drawSharpEye(ctx, eyeRightCenterX + lookX, finalEyeCenterY, eyeColor);
+      } else if (drawTerminalEyes) {
+        // Terminal 状态眨眼与光标
+        if (isTerminalClosed) {
+          // 眨眼完全闭上时：左眼细横线，右眼 < 形状
+          drawRoundRect(ctx, eyeLeftCenterX - eyeS / 2 + lookX, finalEyeCenterY - 2, eyeS, 4, 2);
+          
+          ctx.save();
+          ctx.strokeStyle = eyeColor;
+          ctx.lineWidth = 4;
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.beginPath();
+          ctx.moveTo(eyeRightCenterX + 8 + lookX, finalEyeCenterY - 8);
+          ctx.lineTo(eyeRightCenterX - 8 + lookX, finalEyeCenterY);
+          ctx.lineTo(eyeRightCenterX + 8 + lookX, finalEyeCenterY + 8);
+          ctx.stroke();
+          ctx.restore();
+        } else {
+          // 平常睁开状态：正常方形大眼睛
+          drawRoundRect(ctx, eyeLeftCenterX - eyeS / 2 + lookX, finalEyeCenterY - eyeS / 2, eyeS, eyeS, eyeR);
+          drawRoundRect(ctx, eyeRightCenterX - eyeS / 2 + lookX, finalEyeCenterY - eyeS / 2, eyeS, eyeS, eyeR);
+        }
+      } else {
+        // 正常眨眼与圆角大眼睛
+        const leftEyeH = eyeS * eyeScaleY;
+        const rightEyeH = eyeS * eyeScaleY;
+        drawRoundRect(ctx, eyeLeftCenterX - eyeS / 2 + lookX, finalEyeCenterY - leftEyeH / 2, eyeS, leftEyeH, eyeR);
+        drawRoundRect(ctx, eyeRightCenterX - eyeS / 2 + lookX, finalEyeCenterY - rightEyeH / 2, eyeS, rightEyeH, eyeR);
+      }
+
+      // 7. 绘制思考云气泡（跟随机体倾斜旋转）
+      if (drawThinkingBubble) {
+        ctx.save();
+        ctx.fillStyle = eyeColor; // 想法气泡底色为白
+        const bYOff = bubbleOffsetY;
+
+        // 小圆1 (靠近头部右上角)
+        const cx1 = bodyCenterX + bodyW * 0.44;
+        const cy1 = bodyCenterY - bodyH * 0.48 + bYOff;
+        drawEllipse(ctx, cx1, cy1, 4.5, 4.5);
+
+        // 中圆2 (过渡)
+        const cx2 = bodyCenterX + bodyW * 0.54;
+        const cy2 = bodyCenterY - bodyH * 0.62 + bYOff;
+        drawEllipse(ctx, cx2, cy2, 7.5, 7.5);
+
+        // 想法气泡主体：主圆 + 两侧气泡叠加
+        const cx3 = bodyCenterX + bodyW * 0.70;
+        const cy3 = bodyCenterY - bodyH * 0.78 + bYOff;
+        drawEllipse(ctx, cx3, cy3, 14, 14); // 主圆
+        drawEllipse(ctx, cx3 - 9, cy3 + 4, 10, 10); // 左下凸起
+        drawEllipse(ctx, cx3 + 7, cy3 - 4, 11, 11); // 右上凸起
+        ctx.restore();
+      }
+
+      ctx.restore();
+
+      // 8. 辅助定位格线绘制 (调测模式)
+      if (drawGrid) {
+        ctx.strokeStyle = "rgba(255, 0, 0, 0.25)";
+        ctx.lineWidth = 1;
+        // 十字中心轴
+        ctx.beginPath();
+        ctx.moveTo(128, 0); ctx.lineTo(128, 256);
+        ctx.moveTo(0, 128); ctx.lineTo(256, 128);
+        ctx.stroke();
+        // 外围安全边框
+        ctx.strokeStyle = "rgba(255, 0, 0, 0.15)";
+        ctx.strokeRect(4, 4, 248, 248);
+      }
+    }
+
+    // 核心绘制功能2: 动态合成 SVG 字符串 (与原生绘制完全物理对齐，支持当前 Focused 帧导出)
+    function generateSvgString(stateId, frameId, config) {
+      const { bodyColor, eyeColor, bgColor, isTransparent } = config;
+      const t = frameId / 8;
+
+      let bodyW = 132;
+      let bodyH = 118;
+      let bodyCenterX = 128;
+      let bodyCenterY = 126;
+      let bodyR = 40;
+
+      let eyeS = 22;
+      let eyeR = 6;
+      let eyeCenterY = 115;
+      let eyeSpacing = 48;
+
+      let armRx = 12;
+      let armRy = 15;
+      let armRotL = 25; // 角度制，便于 SVG rotate
+      let armRotR = -25;
+      let leftArmX = 54;
+      let leftArmY = 142;
+      let rightArmX = 202;
+      let rightArmY = 142;
+
+      let footW = 24;
+      let footH = 22;
+      let footR = 8;
+
+      let leanAngle = 0; // 角度
+      let shiftX = 0;
+      let shiftY = 0;
+      let eyeScaleY = 1.0;
+      let lookX = 0;
+      let lookY = 0;
+      let eyeSquish = false;
+      let rightArmCustom = false;
+      let customLeftArm = false;
+
+      let drawThinkingBubble = false;
+      let bubbleOffsetY = 0;
+      let drawTerminalEyes = false;
+      let isTerminalClosed = false;
+      let drawWaitingSymbols = false;
+      let eyeSharp = false;
+
+      switch(stateId) {
+        case 0: // idle
+          shiftY = 3.5 * Math.sin(2 * Math.PI * t);
+          if (frameId === 3 || frameId === 4) eyeScaleY = 0.1;
+          break;
+        case 1: // thinking
+          leanAngle = (0.08 * Math.sin(2 * Math.PI * t)) * 180 / Math.PI; // 弧度转角度
+          lookX = 5.5 * Math.sin(2 * Math.PI * t);
+          lookY = -1.5;
+          drawThinkingBubble = true;
+          bubbleOffsetY = 4 * Math.sin(2 * Math.PI * t);
+          break;
+        case 2: // tool_use
+          shiftX = 1.5;
+          shiftY = 1.0;
+          leftArmY += 7.5 * Math.sin(2 * Math.PI * (frameId / 4));
+          rightArmY += 7.5 * Math.cos(2 * Math.PI * (frameId / 4));
+          armRotL = 40;
+          armRotR = -40;
+          break;
+        case 3: // editing
+          shiftX = 2.0 * Math.sin(2 * Math.PI * (frameId / 2));
+          lookX = 7.5 * Math.sin(2 * Math.PI * t);
+          customLeftArm = true;
+          leftArmX = bodyCenterX - bodyW / 2 + 10 + 3 * Math.cos(2 * Math.PI * (frameId / 2));
+          leftArmY = bodyCenterY + 24 + 3 * Math.sin(2 * Math.PI * (frameId / 2));
+          armRotL = 72;
+          rightArmCustom = true;
+          rightArmX = bodyCenterX + bodyW / 2 - 10 + 3 * Math.sin(2 * Math.PI * (frameId / 2));
+          rightArmY = bodyCenterY + 24 + 3 * Math.cos(2 * Math.PI * (frameId / 2));
+          armRotR = -72;
+          break;
+        case 4: // terminal
+          shiftX = 1.2 * (frameId % 2 === 0 ? 1 : -1);
+          shiftY = 0.8 * (frameId % 3 === 0 ? 1 : -1);
+          drawTerminalEyes = true;
+          isTerminalClosed = (frameId === 3 || frameId === 4);
+          break;
+        case 5: // waiting_approval
+          bodyW = 138;
+          bodyH = 112;
+          bodyCenterY += 4;
+          eyeS = 25;
+          customLeftArm = true;
+          leftArmX = bodyCenterX - bodyW / 2 - 2;
+          leftArmY = bodyCenterY - 14 + 4 * Math.sin(2 * Math.PI * t);
+          armRotL = 145;
+          rightArmCustom = true;
+          rightArmX = bodyCenterX + bodyW / 2 + 2;
+          rightArmY = bodyCenterY - 14 - 4 * Math.sin(2 * Math.PI * t);
+          armRotR = -145;
+          drawWaitingSymbols = true;
+          break;
+        case 6: // success
+          const bounce = -24 * Math.sin(Math.PI * (frameId / 7));
+          shiftY = bounce;
+          if (frameId === 0 || frameId === 7) {
+            bodyW = 142;
+            bodyH = 106;
+          } else {
+            const stretch = 0.12 * Math.sin(Math.PI * (frameId / 7));
+            bodyW *= (1 - stretch * 0.5);
+            bodyH *= (1 + stretch);
+          }
+          customLeftArm = true;
+          leftArmX = bodyCenterX - bodyW / 2 - 3;
+          leftArmY = bodyCenterY - 12 + 4 * Math.sin(2 * Math.PI * (frameId / 4));
+          armRotL = 152;
+          rightArmCustom = true;
+          rightArmX = bodyCenterX + bodyW / 2 + 3;
+          rightArmY = bodyCenterY - 12 - 4 * Math.sin(2 * Math.PI * (frameId / 4));
+          armRotR = -152;
+          break;
+        case 7: // error
+          shiftX = 14 * Math.sin(2 * Math.PI * t);
+          leanAngle = (0.08 * Math.sin(2 * Math.PI * t)) * 180 / Math.PI;
+          bodyW = 136;
+          bodyH = 108;
+          eyeSharp = true;
+          armRotL = 8 + (0.08 * Math.sin(2 * Math.PI * (frameId / 2))) * 180 / Math.PI;
+          armRotR = -8 - (0.08 * Math.sin(2 * Math.PI * (frameId / 2))) * 180 / Math.PI;
+          break;
+      }
+
+      bodyCenterX += shiftX;
+      bodyCenterY += shiftY;
+      leftArmX += shiftX;
+      leftArmY += shiftY;
+      rightArmX += shiftX;
+      rightArmY += shiftY;
+
+      const currentBodyBottom = bodyCenterY + bodyH / 2;
+      const footLeftXLoc = bodyCenterX - 28;
+      const footRightXLoc = bodyCenterX + 28 - footW;
+      const footYLoc = currentBodyBottom - 10;
+
+      const eyeLeftCenterX = bodyCenterX - eyeSpacing / 2;
+      const eyeRightCenterX = bodyCenterX + eyeSpacing / 2;
+      const finalEyeCenterY = bodyCenterY - (bodyH * 0.08) + lookY;
+
+      let backgroundTag = isTransparent ? '' : `<rect width="256" height="256" fill="${bgColor}" />`;
+      let transformGroupOpen = leanAngle !== 0 ? `<g transform="translate(128, 182) rotate(${leanAngle}) translate(-128, -182)">` : '<g>';
+      let transformGroupClose = '</g>';
+
+      // 手臂 SVG 节点
+      let armsTag = `
+    <!-- 左手臂 -->
+    <g transform="translate(${leftArmX}, ${leftArmY}) rotate(${armRotL})">
+      <ellipse cx="0" cy="0" rx="${armRx}" ry="${armRy}" fill="${bodyColor}" />
+    </g>
+    <!-- 右手臂 -->
+    <g transform="translate(${rightArmX}, ${rightArmY}) rotate(${armRotR})">
+      <ellipse cx="0" cy="0" rx="${armRx}" ry="${armRy}" fill="${bodyColor}" />
+    </g>`;
+
+      // 道具 SVG 节点 (红叉和绿勾)
+      let symbolsTag = '';
+      if (drawWaitingSymbols) {
+        symbolsTag = `
+    <!-- 左手红叉 -->
+    <path d="M${leftArmX - 8} ${leftArmY - 24} L${leftArmX + 8} ${leftArmY - 8} M${leftArmX + 8} ${leftArmY - 24} L${leftArmX - 8} ${leftArmY - 8}" stroke="#FF3B30" stroke-width="5" stroke-linecap="round" />
+    <!-- 右手绿勾 -->
+    <path d="M${rightArmX - 8} ${rightArmY - 16} L${rightArmX - 2} ${rightArmY - 10} L${rightArmX + 9} ${rightArmY - 21}" stroke="#34C759" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none" />`;
+      }
+
+      // 腿脚 SVG 节点
+      let feetTag = `
+    <!-- 双脚 -->
+    <rect x="${footLeftXLoc}" y="${footYLoc}" width="${footW}" height="${footH}" rx="${footR}" ry="${footR}" fill="${bodyColor}" />
+    <rect x="${footRightXLoc}" y="${footYLoc}" width="${footW}" height="${footH}" rx="${footR}" ry="${footR}" fill="${bodyColor}" />`;
+
+      // 身体主体 SVG 节点
+      let bodyTag = `
+    <!-- 身体主体 -->
+    <rect x="${bodyCenterX - bodyW / 2}" y="${bodyCenterY - bodyH / 2}" width="${bodyW}" height="${bodyH}" rx="${bodyR}" ry="${bodyR}" fill="${bodyColor}" />`;
+
+      // 眼睛 SVG 节点 (支持井号眼、终端眨眼等)
+      let eyesTag = '';
+      if (eyeSharp) {
+        const d = 5.5;
+        const len = 10;
+        const makeSharpEyePath = (cx) => `
+    <g stroke="${eyeColor}" stroke-width="4" stroke-linecap="round">
+      <line x1="${cx - len}" y1="${finalEyeCenterY - d}" x2="${cx + len}" y2="${finalEyeCenterY - d}" />
+      <line x1="${cx - len}" y1="${finalEyeCenterY + d}" x2="${cx + len}" y2="${finalEyeCenterY + d}" />
+      <line x1="${cx - d}" y1="${finalEyeCenterY - len}" x2="${cx - d}" y2="${finalEyeCenterY + len}" />
+      <line x1="${cx + d}" y1="${finalEyeCenterY - len}" x2="${cx + d}" y2="${finalEyeCenterY + len}" />
+    </g>`;
+        eyesTag = `<!-- 井号混乱眼 -->` + makeSharpEyePath(eyeLeftCenterX + lookX) + makeSharpEyePath(eyeRightCenterX + lookX);
+      } else if (drawTerminalEyes) {
+        if (isTerminalClosed) {
+          eyesTag = `
+    <!-- 终端眨眼：左眼细横条 -->
+    <rect x="${eyeLeftCenterX - eyeS / 2 + lookX}" y="${finalEyeCenterY - 2}" width="${eyeS}" height="4" rx="2" ry="2" fill="${eyeColor}" />
+    <!-- 终端眨眼：右眼 < 形光标 -->
+    <path d="M${eyeRightCenterX + 8 + lookX} ${finalEyeCenterY - 8} L${eyeRightCenterX - 8 + lookX} ${finalEyeCenterY} L${eyeRightCenterX + 8 + lookX} ${finalEyeCenterY + 8}" stroke="${eyeColor}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none" />`;
+        } else {
+          eyesTag = `
+    <!-- 终端正常大圆眼 -->
+    <rect x="${eyeLeftCenterX - eyeS / 2 + lookX}" y="${finalEyeCenterY - eyeS / 2}" width="${eyeS}" height="${eyeS}" rx="${eyeR}" ry="${eyeR}" fill="${eyeColor}" />
+    <rect x="${eyeRightCenterX - eyeS / 2 + lookX}" y="${finalEyeCenterY - eyeS / 2}" width="${eyeS}" height="${eyeS}" rx="${eyeR}" ry="${eyeR}" fill="${eyeColor}" />`;
+        }
+      } else {
+        const leftEyeH = eyeS * eyeScaleY;
+        const rightEyeH = eyeS * eyeScaleY;
+        eyesTag = `
+    <!-- 正常眨眼与圆角大眼睛 -->
+    <rect x="${eyeLeftCenterX - eyeS / 2 + lookX}" y="${finalEyeCenterY - leftEyeH / 2}" width="${eyeS}" height="${leftEyeH}" rx="${eyeR}" ry="${eyeR}" fill="${eyeColor}" />
+    <rect x="${eyeRightCenterX - eyeS / 2 + lookX}" y="${finalEyeCenterY - rightEyeH / 2}" width="${eyeS}" height="${rightEyeH}" rx="${eyeR}" ry="${eyeR}" fill="${eyeColor}" />`;
+      }
+
+      // 想法云气泡 SVG 节点
+      let bubbleTag = '';
+      if (drawThinkingBubble) {
+        const bYOff = bubbleOffsetY;
+        const cx1 = bodyCenterX + bodyW * 0.44;
+        const cy1 = bodyCenterY - bodyH * 0.48 + bYOff;
+        const cx2 = bodyCenterX + bodyW * 0.54;
+        const cy2 = bodyCenterY - bodyH * 0.62 + bYOff;
+        const cx3 = bodyCenterX + bodyW * 0.70;
+        const cy3 = bodyCenterY - bodyH * 0.78 + bYOff;
+
+        bubbleTag = `
+    <!-- 想法云气泡组 -->
+    <circle cx="${cx1}" cy="${cy1}" r="4.5" fill="${eyeColor}" />
+    <circle cx="${cx2}" cy="${cy2}" r="7.5" fill="${eyeColor}" />
+    <g fill="${eyeColor}">
+      <circle cx="${cx3}" cy="${cy3}" r="14" />
+      <circle cx="${cx3 - 9}" cy="${cy3 + 4}" r="10" />
+      <circle cx="${cx3 + 7}" cy="${cy3 - 4}" r="11" />
+    </g>`;
+      }
+
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="100%" height="100%">
+  ${backgroundTag}
+  ${transformGroupOpen}
+    ${armsTag}
+    ${symbolsTag}
+    ${feetTag}
+    ${bodyTag}
+    ${eyesTag}
+    ${bubbleTag}
+  ${transformGroupClose}
+</svg>`;
+    }
+
+    // 核心绘制功能3: 输出可编辑的原生 Canvas JavaScript 绘图函数代码
+    function generateCanvasJsCode(stateId, frameId, config) {
+      return `// 原生 HTML5 Canvas 2D 绘制代码
+// 状态 ID: ${stateId} (${STATES_META[stateId].name}), 帧 ID: ${frameId}
+function drawPetFrame(ctx, config) {
+  const bodyColor = "${config.bodyColor}";
+  const eyeColor = "${config.eyeColor}";
+  const bgColor = "${config.bgColor}";
+  const isTransparent = ${config.isTransparent};
+  const stateId = ${stateId};
+  const frameId = ${frameId};
+
+  if (!isTransparent) {
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, 256, 256);
+  } else {
+    ctx.clearRect(0, 0, 256, 256);
+  }
+
+  ctx.save();
+
+  // 基础常量配置
+  let bodyW = 132;
+  let bodyH = 118;
+  let bodyCenterX = 128;
+  let bodyCenterY = 126;
+  let bodyR = 40;
+
+  let eyeS = 22;
+  let eyeR = 6;
+  let eyeSpacing = 48;
+
+  let armRx = 12;
+  let armRy = 15;
+  let armRotL = 25 * Math.PI / 180;
+  let armRotR = -25 * Math.PI / 180;
+  let leftArmX = 54;
+  let leftArmY = 142;
+  let rightArmX = 202;
+  let rightArmY = 142;
+
+  let footW = 24;
+  let footH = 22;
+  let footR = 8;
+
+  let leanAngle = 0, shiftX = 0, shiftY = 0, eyeScaleY = 1.0, lookX = 0, lookY = 0;
+  let drawThinkingBubble = false, bubbleOffsetY = 0, drawTerminalEyes = false;
+  let isTerminalClosed = false, drawWaitingSymbols = false, eyeSharp = false;
+
+  const t = frameId / 8;
+
+  // 动画及物理姿态状态机
+  if (stateId === 1) { // thinking: 飘想法云气泡
+    leanAngle = 0.08 * Math.sin(2 * Math.PI * t);
+    lookX = 5.5 * Math.sin(2 * Math.PI * t);
+    lookY = -1.5;
+    drawThinkingBubble = true;
+    bubbleOffsetY = 4 * Math.sin(2 * Math.PI * t);
+  } else if (stateId === 4) { // terminal: 眨眼 + < 符号
+    shiftX = 1.2 * (frameId % 2 === 0 ? 1 : -1);
+    shiftY = 0.8 * (frameId % 3 === 0 ? 1 : -1);
+    drawTerminalEyes = true;
+    isTerminalClosed = (frameId === 3 || frameId === 4);
+  } else if (stateId === 5) { // waiting_approval: 举红叉绿勾
+    bodyW = 138; bodyH = 112; bodyCenterY += 4; eyeS = 25;
+    leftArmX = bodyCenterX - bodyW / 2 - 2; leftArmY = bodyCenterY - 14 + 4 * Math.sin(2 * Math.PI * t);
+    rightArmX = bodyCenterX + bodyW / 2 + 2; rightArmY = bodyCenterY - 14 - 4 * Math.sin(2 * Math.PI * t);
+    armRotL = 145 * Math.PI / 180; armRotR = -145 * Math.PI / 180;
+    drawWaitingSymbols = true;
+  } else if (stateId === 7) { // error: 井号眼睛
+    shiftX = 14 * Math.sin(2 * Math.PI * t);
+    leanAngle = 0.08 * Math.sin(2 * Math.PI * t);
+    bodyW = 136; bodyH = 108; eyeSharp = true;
+    armRotL = 8 * Math.PI / 180 + 0.08 * Math.sin(2 * Math.PI * (frameId / 2));
+    armRotR = -8 * Math.PI / 180 - 0.08 * Math.sin(2 * Math.PI * (frameId / 2));
+  } else {
+    // 默认或其它状态动画计算...
+    if (stateId === 0) {
+      shiftY = 3.5 * Math.sin(2 * Math.PI * t);
+      if (frameId === 3 || frameId === 4) eyeScaleY = 0.1;
+    }
+  }
+
+  // 坐标应用
+  bodyCenterX += shiftX; bodyCenterY += shiftY;
+  leftArmX += shiftX; leftArmY += shiftY;
+  rightArmX += shiftX; rightArmY += shiftY;
+
+  // 下盘中点 Pivot 旋转保护，保证 Baseline 连续不漂移
+  if (leanAngle !== 0) {
+    ctx.translate(128, 182);
+    ctx.rotate(leanAngle);
+    ctx.translate(-128, -182);
+  }
+
+  // 1. 辅助圆角矩形和椭圆绘制函数
+  function drawRoundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawEllipse(cx, cy, rx, ry) {
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+
+  // 2. 绘制左臂与右臂
+  ctx.fillStyle = bodyColor;
+  ctx.save(); ctx.translate(leftArmX, leftArmY); ctx.rotate(armRotL); drawEllipse(0, 0, armRx, armRy); ctx.restore();
+  ctx.save(); ctx.translate(rightArmX, rightArmY); ctx.rotate(armRotR); drawEllipse(0, 0, armRx, armRy); ctx.restore();
+
+  // 3. 绘制道具符号 (红叉和绿勾)
+  if (drawWaitingSymbols) {
+    // 红色叉
+    ctx.strokeStyle = "#FF3B30"; ctx.lineWidth = 5; ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(leftArmX - 8, leftArmY - 24); ctx.lineTo(leftArmX + 8, leftArmY - 8);
+    ctx.moveTo(leftArmX + 8, leftArmY - 24); ctx.lineTo(leftArmX - 8, leftArmY - 8);
+    ctx.stroke();
+    // 绿色勾
+    ctx.strokeStyle = "#34C759"; ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(rightArmX - 8, rightArmY - 16); ctx.lineTo(rightArmX - 2, rightArmY - 10); ctx.lineTo(rightArmX + 9, rightArmY - 21);
+    ctx.stroke();
+  }
+
+  // 4. 绘制双脚
+  const currentBodyBottom = bodyCenterY + bodyH / 2;
+  const footYLoc = currentBodyBottom - 10;
+  drawRoundRect(bodyCenterX - 28, footYLoc, footW, footH, footR);
+  drawRoundRect(bodyCenterX + 28 - footW, footYLoc, footW, footH, footR);
+
+  // 5. 绘制身体主体
+  drawRoundRect(bodyCenterX - bodyW / 2, bodyCenterY - bodyH / 2, bodyW, bodyH, bodyR);
+
+  // 6. 绘制眼睛
+  ctx.fillStyle = eyeColor;
+  const eyeLeftCenterX = bodyCenterX - eyeSpacing / 2;
+  const eyeRightCenterX = bodyCenterX + eyeSpacing / 2;
+  const finalEyeCenterY = bodyCenterY - (bodyH * 0.08) + lookY;
+
+  if (eyeSharp) {
+    // #型井号眼实现
+    const drawSharpEye = (cx) => {
+      ctx.save(); ctx.strokeStyle = eyeColor; ctx.lineWidth = 4; ctx.lineCap = "round";
+      const d = 5.5, len = 10;
+      ctx.beginPath();
+      ctx.moveTo(cx - len, finalEyeCenterY - d); ctx.lineTo(cx + len, finalEyeCenterY - d);
+      ctx.moveTo(cx - len, finalEyeCenterY + d); ctx.lineTo(cx + len, finalEyeCenterY + d);
+      ctx.moveTo(cx - d, finalEyeCenterY - len); ctx.lineTo(cx - d, finalEyeCenterY + len);
+      ctx.moveTo(cx + d, finalEyeCenterY - len); ctx.lineTo(cx + d, finalEyeCenterY + len);
+      ctx.stroke(); ctx.restore();
+    };
+    drawSharpEye(eyeLeftCenterX + lookX);
+    drawSharpEye(eyeRightCenterX + lookX);
+  } else if (drawTerminalEyes && isTerminalClosed) {
+    // 终端眨眼：左眼横线 + 右眼 < 符号
+    drawRoundRect(eyeLeftCenterX - eyeS / 2 + lookX, finalEyeCenterY - 2, eyeS, 4, 2);
+    ctx.save(); ctx.strokeStyle = eyeColor; ctx.lineWidth = 4; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(eyeRightCenterX + 8 + lookX, finalEyeCenterY - 8);
+    ctx.lineTo(eyeRightCenterX - 8 + lookX, finalEyeCenterY);
+    ctx.lineTo(eyeRightCenterX + 8 + lookX, finalEyeCenterY + 8);
+    ctx.stroke(); ctx.restore();
+  } else {
+    // 正常眼
+    const leftEyeH = eyeS * eyeScaleY;
+    drawRoundRect(eyeLeftCenterX - eyeS / 2 + lookX, finalEyeCenterY - leftEyeH / 2, eyeS, leftEyeH, eyeR);
+    drawRoundRect(eyeRightCenterX - eyeS / 2 + lookX, finalEyeCenterY - leftEyeH / 2, eyeS, leftEyeH, eyeR);
+  }
+
+  // 7. 绘制想法气泡组 (Thinking)
+  if (drawThinkingBubble) {
+    ctx.save(); ctx.fillStyle = eyeColor;
+    const bYOff = bubbleOffsetY;
+    const cx1 = bodyCenterX + bodyW * 0.44, cy1 = bodyCenterY - bodyH * 0.48 + bYOff;
+    const cx2 = bodyCenterX + bodyW * 0.54, cy2 = bodyCenterY - bodyH * 0.62 + bYOff;
+    const cx3 = bodyCenterX + bodyW * 0.70, cy3 = bodyCenterY - bodyH * 0.78 + bYOff;
+
+    drawEllipse(cx1, cy1, 4.5, 4.5);
+    drawEllipse(cx2, cy2, 7.5, 7.5);
+    drawEllipse(cx3, cy3, 14, 14);
+    drawEllipse(cx3 - 9, cy3 + 4, 10, 10);
+    drawEllipse(cx3 + 7, cy3 - 4, 11, 11);
+    ctx.restore();
+  }
+
+  ctx.restore();
+}`;
+    }
+
+    // 初始化 8 种状态的预览 DOM 容器
+    function createPreviewCards() {
+      previewsContainer.innerHTML = '';
+      STATES_META.forEach(state => {
+        const div = document.createElement('div');
+        div.className = `p-3 bg-slate-900 border ${renderConfig.activeInspectState === state.id ? 'border-blue-600 shadow-blue-500/5' : 'border-slate-800'} rounded-xl cursor-pointer hover:border-slate-700 transition flex items-center gap-3 active-card`;
+        div.dataset.stateId = state.id;
+        div.innerHTML = `
+          <div class="w-16 h-16 bg-slate-950 border border-slate-800 rounded-lg overflow-hidden transparency-grid flex items-center justify-center relative">
+            <canvas id="preview_${state.id}" width="256" height="256" class="w-full h-full object-contain"></canvas>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-xs font-bold text-white truncate">${state.label}</div>
+            <div class="text-3xs text-slate-500 truncate mt-0.5">${state.name}</div>
+            <div class="text-3xs text-slate-400 truncate mt-1">${state.desc}</div>
+          </div>
+        `;
+        div.addEventListener('click', () => {
+          renderConfig.activeInspectState = state.id;
+          updateInspectActiveBorder();
+          drawFocusedPreviews();
+          syncCodePanels(); // 手动同步源码
+        });
+        previewsContainer.appendChild(div);
+      });
+    }
+
+    // 更新选中的卡片高亮边框
+    function updateInspectActiveBorder() {
+      const cards = previewsContainer.querySelectorAll('.active-card');
+      cards.forEach(card => {
+        const id = parseInt(card.dataset.stateId, 10);
+        if (id === renderConfig.activeInspectState) {
+          card.classList.add('border-blue-600', 'shadow-blue-500/5');
+          card.classList.remove('border-slate-800');
+        } else {
+          card.classList.remove('border-blue-600', 'shadow-blue-500/5');
+          card.classList.add('border-slate-800');
+        }
+      });
+      const currentMeta = STATES_META.find(m => m.id === renderConfig.activeInspectState);
+      inspectorTitle.textContent = `Focused: Row ${currentMeta.id} (${currentMeta.name})`;
+    }
+
+    // 初始化 Focused 帧检查器
+    function createInspectStrips() {
+      inspectStripContainer.innerHTML = '';
+      for (let f = 0; f < 8; f++) {
+        const div = document.createElement('div');
+        div.className = "flex flex-col items-center bg-slate-950 p-1.5 rounded-lg border border-slate-800/80";
+        div.innerHTML = `
+          <div class="w-full aspect-square bg-slate-900 rounded border border-slate-800 overflow-hidden transparency-grid flex items-center justify-center">
+            <canvas id="inspect_frame_${f}" width="256" height="256" class="w-full h-full object-contain"></canvas>
+          </div>
+          <span class="text-3xs text-slate-500 font-mono mt-1.5 font-bold">F ${f}</span>
+        `;
+        inspectStripContainer.appendChild(div);
+      }
+    }
+
+    // 绘制 Focused 逐帧检查图
+    function drawFocusedPreviews() {
+      const stateId = renderConfig.activeInspectState;
+      for (let f = 0; f < 8; f++) {
+        const canvas = document.getElementById(`inspect_frame_${f}`);
+        if (!canvas) continue;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, 256, 256);
+        renderPetFrame(ctx, stateId, f, {
+          ...renderConfig,
+          isTransparent: true, // 检查器强制采用棋盘透明底
+          drawGrid: renderConfig.drawGrid 
+        });
+      }
+    }
+
+    // 绘制主 2048x2048 大贴图画板
+    function renderMasterSpritesheet() {
+      const ctx = masterCanvas.getContext('2d');
+      ctx.clearRect(0, 0, 2048, 2048);
+
+      // 严格绘制 8 行 8 列
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          ctx.save();
+          // 定位至对应精灵单元格
+          ctx.translate(c * 256, r * 256);
+          renderPetFrame(ctx, r, c, {
+            ...renderConfig,
+            drawGrid: false // 导出图不绘制格线
+          });
+          ctx.restore();
+        }
+      }
+    }
+
+    // 联动同步代码面板 (绘制第0帧作为精准模版)
+    function syncCodePanels() {
+      const stateId = renderConfig.activeInspectState;
+      if (codeSvg) {
+        codeSvg.value = generateSvgString(stateId, 0, renderConfig);
+      }
+      if (codeCanvas) {
+        codeCanvas.value = generateCanvasJsCode(stateId, 0, renderConfig);
+      }
+    }
+
+    // 参数全局修改响应
+    function onConfigChanged() {
+      // 刷新数值
+      lblFps.textContent = renderConfig.fps;
+      textSkin.value = renderConfig.bodyColor.toUpperCase();
+      textEye.value = renderConfig.eyeColor.toUpperCase();
+      textBg.value = renderConfig.bgColor.toUpperCase();
+
+      // 全局重绘
+      renderMasterSpritesheet();
+      drawFocusedPreviews();
+      syncCodePanels();
+    }
+
+    // 联动背景选项
+    bgChroma.addEventListener('click', () => {
+      bgChroma.className = "py-2 px-3 text-xs rounded-xl font-medium border border-blue-500 bg-blue-600/10 text-blue-400 transition-all";
+      bgTransparent.className = "py-2 px-3 text-xs rounded-xl font-medium border border-slate-800 bg-slate-900 text-slate-400 hover:text-white transition-all";
+      chromaColorGroup.classList.remove('hidden');
+      renderConfig.isTransparent = false;
+      masterGridIndicator.className = "relative w-full aspect-square border border-slate-800 rounded-xl overflow-hidden shadow-inner flex items-center justify-center p-2 bg-slate-950";
+      onConfigChanged();
+    });
+
+    bgTransparent.addEventListener('click', () => {
+      bgTransparent.className = "py-2 px-3 text-xs rounded-xl font-medium border border-blue-500 bg-blue-600/10 text-blue-400 transition-all";
+      bgChroma.className = "py-2 px-3 text-xs rounded-xl font-medium border border-slate-800 bg-slate-900 text-slate-400 hover:text-white transition-all";
+      chromaColorGroup.classList.add('hidden');
+      renderConfig.isTransparent = true;
+      masterGridIndicator.className = "relative w-full aspect-square border border-slate-800 rounded-xl overflow-hidden shadow-inner flex items-center justify-center p-2 transparency-grid-dark bg-slate-950";
+      onConfigChanged();
+    });
+
+    // 辅助网格切换
+    toggleGrid.addEventListener('click', () => {
+      renderConfig.drawGrid = !renderConfig.drawGrid;
+      if (renderConfig.drawGrid) {
+        toggleGrid.classList.remove('bg-slate-800');
+        toggleGrid.classList.add('bg-blue-600');
+        toggleGridDot.classList.remove('translate-x-1', 'bg-slate-500');
+        toggleGridDot.classList.add('translate-x-6', 'bg-white');
+      } else {
+        toggleGrid.classList.add('bg-slate-800');
+        toggleGrid.classList.remove('bg-blue-600');
+        toggleGridDot.classList.add('translate-x-1', 'bg-slate-500');
+        toggleGridDot.classList.remove('translate-x-6', 'bg-white');
+      }
+      drawFocusedPreviews();
+    });
+
+    // FPS 动态配置
+    rangeFps.addEventListener('input', (e) => {
+      renderConfig.fps = parseInt(e.target.value, 10);
+      lblFps.textContent = renderConfig.fps;
+    });
+
+    // Spritesheet 下载打包
+    btnDownload.addEventListener('click', () => {
+      const dataUrl = masterCanvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `desktop_pet_spritesheet_${renderConfig.isTransparent ? 'transparent' : 'chromakey'}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast("Spritesheet 成功导出为 2048x2048 PNG 资源！");
+    });
+
+    // 源码模态弹窗控制
+    btnOpenModal.addEventListener('click', () => {
+      codeModal.classList.remove('hidden');
+      syncCodePanels();
+    });
+
+    btnCloseModal.addEventListener('click', () => {
+      codeModal.classList.add('hidden');
+    });
+
+    codeModal.addEventListener('click', (e) => {
+      if (e.target === codeModal) {
+        codeModal.classList.add('hidden');
+      }
+    });
+
+    modalTabSvgBtn.addEventListener('click', () => {
+      modalTabSvgBtn.className = "px-4 py-3 text-xs font-semibold text-blue-400 border-b-2 border-blue-500 transition";
+      modalTabCanvasBtn.className = "px-4 py-3 text-xs font-semibold text-slate-400 hover:text-white border-b-2 border-transparent transition";
+      modalPanelSvg.classList.remove('hidden');
+      modalPanelCanvas.classList.add('hidden');
+    });
+
+    modalTabCanvasBtn.addEventListener('click', () => {
+      modalTabCanvasBtn.className = "px-4 py-3 text-xs font-semibold text-blue-400 border-b-2 border-blue-500 transition";
+      modalTabSvgBtn.className = "px-4 py-3 text-xs font-semibold text-slate-400 hover:text-white border-b-2 border-transparent transition";
+      modalPanelCanvas.classList.remove('hidden');
+      modalPanelSvg.classList.add('hidden');
+    });
+
+    // 绘制所有预览卡片
+    function drawPreviews() {
+      for (let r = 0; r < 8; r++) {
+        const canvas = document.getElementById(`preview_${r}`);
+        if (!canvas) continue;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, 256, 256);
+        
+        // 卡片预览默认采用透明背景，方便看清小宠物动态
+        renderPetFrame(ctx, r, currentFrame, {
+          ...renderConfig,
+          isTransparent: true, 
+          drawGrid: false 
+        });
+      }
+    }
+
+    // 主时间轴循环
+    let currentFrame = 0;
+    let lastTime = 0;
+
+    function animLoop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const elapsed = timestamp - lastTime;
+      const interval = 1000 / renderConfig.fps;
+
+      if (elapsed >= interval) {
+        currentFrame = (currentFrame + 1) % 8;
+        lastTime = timestamp - (elapsed % interval);
+        
+        // 渲染 8 个大类状态循环
+        drawPreviews();
+      }
+      requestAnimationFrame(animLoop);
+    }
+
+    // 一键复制代码
+    btnCopySvg.addEventListener('click', () => {
+      copyText(codeSvg.value);
+    });
+
+    btnCopyCanvas.addEventListener('click', () => {
+      copyText(codeCanvas.value);
+    });
+
+    function copyText(text) {
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showToast("代码已成功复制到剪贴板！");
+      } catch (err) {
+        showToast("复制失败，请手动选取复制");
+      }
+    }
+
+    // 初始化系统
+    window.onload = function() {
+      createPreviewCards();
+      createInspectStrips();
+      updateInspectActiveBorder();
+      onConfigChanged();
+      requestAnimationFrame(animLoop);
+    };
+  </script>
+</body>
+</html>
