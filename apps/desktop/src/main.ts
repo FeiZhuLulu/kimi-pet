@@ -528,16 +528,54 @@ init();
 
   // ─── Context menu ──────────────────────────────────────────────
 
+  const SCALE_PRESETS = [0.75, 1, 1.25, 1.5, 2];
+
   ipcMain.on("show-context-menu", () => {
+    const currentSettings = loadSettings();
     const stateItem = (state: string) => ({
       label: state,
       click: () => { postState(state); showBubble(`状态: ${state}`); },
     });
 
+    const scaleSubmenu = SCALE_PRESETS.map((preset) => ({
+      label: `${Math.round(preset * 100)}%`,
+      type: "checkbox" as const,
+      checked: Math.abs(currentSettings.desktop.scale - preset) < 0.001,
+      click: () => {
+        applyScale(preset);
+        updateDesktopSettings({ scale: preset });
+      },
+    }));
+
     const menu = Menu.buildFromTemplate([
       {
         label: "聚焦 Kimi Code CLI",
         click: () => focusKimiCli(),
+      },
+      { type: "separator" },
+      {
+        label: "Scale",
+        submenu: scaleSubmenu,
+      },
+      {
+        label: "Show State Text",
+        type: "checkbox",
+        checked: currentSettings.desktop.showStateText,
+        click: (item: any) => {
+          const visible = item.checked;
+          updateDesktopSettings({ showStateText: visible });
+          win.webContents.send("toggle-state-text", visible);
+        },
+      },
+      {
+        label: "Always on Top",
+        type: "checkbox",
+        checked: currentSettings.desktop.alwaysOnTop,
+        click: (item: any) => {
+          const onTop = item.checked;
+          updateDesktopSettings({ alwaysOnTop: onTop });
+          win.setAlwaysOnTop(onTop, "screen-saver");
+        },
       },
       { type: "separator" },
       {
@@ -551,6 +589,11 @@ init();
           stateItem("success"),
           stateItem("error"),
         ],
+      },
+      { type: "separator" },
+      {
+        label: "Reset Position",
+        click: () => resetWindowPosition(),
       },
       { type: "separator" },
       {
