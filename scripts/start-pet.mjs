@@ -114,6 +114,7 @@ async function startDesktop() {
     throw new Error(`Desktop main not found: ${desktopMain}. Run "pnpm build" first.`);
   }
   const electron = await resolveElectron();
+  console.log(`[kimi-pet] Spawning desktop: ${electron} ${desktopMain}`);
   const env = { ...process.env, KIMI_PET_PORT: PORT };
   if (dryRun) {
     console.log(`[dry-run] Would spawn desktop: ${electron} ${desktopMain}`);
@@ -124,6 +125,9 @@ async function startDesktop() {
     detached: true,
     stdio: "ignore",
     windowsHide: false,
+  });
+  child.on("error", (err) => {
+    console.error(`[kimi-pet] Failed to spawn electron: ${err.message}`);
   });
   child.unref();
   return child;

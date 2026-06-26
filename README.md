@@ -54,19 +54,29 @@ node scripts/install-plugin.mjs
 
 ## 启动
 
+当前公开版 Kimi Code CLI 还不支持自定义 `/pet` slash 命令。项目提供了两种方式启动：
+
+### 方式 1：通过 skill 让 agent 启动（推荐）
+
 在 Kimi Code CLI 聊天输入：
 
 ```text
-/pet
+/start pet
 ```
 
-或在终端运行：
+agent 会读取 `plugins/kimi-pet/skills/start-pet/SKILL.md`，自动运行启动命令。
+
+### 方式 2：直接运行启动脚本
 
 ```bash
 node scripts/start-pet.mjs
 ```
 
+或在 Windows 上双击项目根目录的 `start-pet.bat`。
+
 脚本会按需启动 daemon（默认端口 `17373`）并打开 Electron 透明桌宠窗口。
+
+> 未来 Kimi Code CLI 支持自定义 slash command 后，`/pet` 命令（已安装到 `~/.kimi-code/commands/pet.md`）会自动生效。
 
 ## 验证安装
 

@@ -6,6 +6,12 @@ const { app, BrowserWindow, ipcMain, Menu, shell, screen } = require("electron")
 const { exec, spawn } = require("node:child_process");
 const path = require("node:path");
 
+// Keep the transparent pet window alive when occluded by system overlays (e.g. Snipping Tool).
+app.commandLine.appendSwitch("disable-features", "CalculateNativeWinOcclusion");
+app.commandLine.appendSwitch("disable-renderer-backgrounding");
+app.commandLine.appendSwitch("disable-background-timer-throttling");
+app.commandLine.appendSwitch("disable-backgrounding-occluded-windows", "1");
+
 const DAEMON_PORT = process.env.KIMI_PET_PORT ?? "17373";
 const DAEMON_URL = `http://127.0.0.1:${DAEMON_PORT}`;
 
@@ -134,6 +140,23 @@ function createWindow() {
   // Keep the pet above system overlays (e.g. Snipping Tool) and prevent throttling.
   win.setAlwaysOnTop(true, "screen-saver");
   win.setVisibleOnAllWorkspaces(true);
+
+  // Some system overlays can steal topmost status or hide the window. Re-assert periodically.
+  const topmostInterval = setInterval(() => {
+    if (win.isDestroyed()) {
+      clearInterval(topmostInterval);
+      return;
+    }
+    if (!win.isVisible()) {
+      win.showInactive();
+    }
+    win.setAlwaysOnTop(true, "screen-saver");
+  }, 2000);
+
+  win.on("minimize", (_event: any) => {
+    _event.preventDefault();
+    win.restore();
+  });
 
   const html = `
 <!DOCTYPE html>
