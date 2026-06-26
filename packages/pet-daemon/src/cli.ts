@@ -6,8 +6,8 @@ import { PetDaemon } from "./daemon.js";
 
 const port = Number(process.env.KIMI_PET_PORT ?? "17373");
 const host = process.env.KIMI_PET_HOST ?? "127.0.0.1";
-const cwdPetPack = path.join(process.cwd(), "pets", "kimi-robot");
-const homePetPack = path.join(os.homedir(), ".kimi-pet", "pets", "kimi-robot");
+const cwdPetPack = path.join(process.cwd(), "pets", "kimi-block");
+const homePetPack = path.join(os.homedir(), ".kimi-pet", "pets", "kimi-block");
 const defaultPetPack = fsSync.existsSync(cwdPetPack) ? cwdPetPack : homePetPack;
 const petPackDir = process.env.KIMI_PET_PETPACK ?? defaultPetPack;
 

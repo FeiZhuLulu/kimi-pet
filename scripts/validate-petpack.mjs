@@ -9,7 +9,7 @@ const projectRoot = path.resolve(__dirname, "..");
 const arg = process.argv[2];
 const petDir = arg
   ? path.resolve(arg)
-  : path.join(projectRoot, "pets", "kimi-robot");
+  : path.join(projectRoot, "pets", "kimi-block");
 
 const result = await validatePetPack(petDir);
 

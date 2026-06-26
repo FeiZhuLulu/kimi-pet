@@ -14,7 +14,7 @@ const PROJECT_ROOT = path.resolve(__dirname, "..");
 
 const PORT = process.env.KIMI_PET_PORT ?? "17373";
 const DAEMON_URL = `http://127.0.0.1:${PORT}`;
-const PETPACK = process.env.KIMI_PET_PETPACK ?? path.join(PROJECT_ROOT, "pets", "kimi-robot");
+const PETPACK = process.env.KIMI_PET_PETPACK ?? path.join(PROJECT_ROOT, "pets", "kimi-block");
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
@@ -29,7 +29,7 @@ Options:
 
 Environment:
   KIMI_PET_PORT      Daemon port (default: 17373)
-  KIMI_PET_PETPACK   Path to petpack directory (default: <repo>/pets/kimi-robot)
+  KIMI_PET_PETPACK   Path to petpack directory (default: <repo>/pets/kimi-block)
 `);
   process.exit(0);
 }

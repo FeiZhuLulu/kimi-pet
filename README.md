@@ -127,8 +127,8 @@ kimi-pet/
 │   ├── kimi-wrapper/       # 共享 Kimi 集成辅助
 │   └── shared-types/       # 共享 TypeScript 类型
 ├── pets/
-│   ├── kimi-robot/         # 默认 petpack（精灵图 + pet.json）
-│   └── kimi-block/         # 程序化 Canvas 蓝色方块机器人 petpack
+│   ├── kimi-block/         # 默认 petpack（程序化 Canvas 蓝色方块机器人）
+│   └── kimi-robot/         # 备用 petpack（3D 风格机器人）
 ├── scripts/
 │   ├── install-all.mjs           # 一键安装
 │   ├── install-hooks.mjs         # 注册 Kimi hooks
@@ -163,7 +163,7 @@ pnpm validate:petpack
 
 ## 自定义桌宠
 
-默认 petpack 在 `pets/kimi-robot/`：
+默认 petpack 在 `pets/kimi-block/`：
 
 - `spritesheet.webp` — 8×8 网格，每格 256×256 动画帧
 - `pet.json` — 动画元数据（row、frames、fps、loop、next）
@@ -174,21 +174,21 @@ pnpm validate:petpack
 
 当前仓库包含两套 petpack：
 
-- `pets/kimi-robot/` — 默认 petpack，256×256 8×8 网格。
-- `pets/kimi-block/` — 程序化 Canvas 生成的极简蓝色方块机器人，源文件在 `assets/kimi-block/source/canvas-generator.html`。
+- `pets/kimi-block/` — 默认 petpack，程序化 Canvas 生成的极简蓝色方块机器人，源文件在 `assets/kimi-block/source/canvas-generator.html`。
+- `pets/kimi-robot/` — 备用 petpack，256×256 8×8 网格。
 
-### 预览 kimi-block
+### 临时切换回 kimi-robot
 
-不改默认的情况下，通过环境变量临时切换：
+通过环境变量指定：
 
 ```powershell
-$env:KIMI_PET_PETPACK="E:\项目库\桌宠项目\pets\kimi-block"
+$env:KIMI_PET_PETPACK="E:\项目库\桌宠项目\pets\kimi-robot"
 node scripts/start-pet.mjs
 ```
 
 ```bash
 # macOS / Linux
-KIMI_PET_PETPACK=/path/to/pets/kimi-block node scripts/start-pet.mjs
+KIMI_PET_PETPACK=/path/to/pets/kimi-robot node scripts/start-pet.mjs
 ```
 
 ### 重新导出 kimi-block 素材

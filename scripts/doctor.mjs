@@ -161,23 +161,23 @@ const checks = [
   {
     id: "pet-json",
     run: () =>
-      existsSync(join(ROOT, "pets/kimi-robot/pet.json"))
-        ? { level: "ok", message: "pets/kimi-robot/pet.json" }
+      existsSync(join(ROOT, "pets/kimi-block/pet.json"))
+        ? { level: "ok", message: "pets/kimi-block/pet.json" }
         : {
             level: "fail",
-            message: "pets/kimi-robot/pet.json missing",
-            fix: "Check pets/kimi-robot/ directory is complete",
+            message: "pets/kimi-block/pet.json missing",
+            fix: "Check pets/kimi-block/ directory is complete",
           },
   },
   {
     id: "spritesheet",
     run: () =>
-      existsSync(join(ROOT, "pets/kimi-robot/spritesheet.webp"))
-        ? { level: "ok", message: "pets/kimi-robot/spritesheet.webp" }
+      existsSync(join(ROOT, "pets/kimi-block/spritesheet.webp"))
+        ? { level: "ok", message: "pets/kimi-block/spritesheet.webp" }
         : {
             level: "fail",
-            message: "pets/kimi-robot/spritesheet.webp missing",
-            fix: "Check pets/kimi-robot/ directory is complete",
+            message: "pets/kimi-block/spritesheet.webp missing",
+            fix: "Check pets/kimi-block/ directory is complete",
           },
   },
   {
@@ -369,20 +369,20 @@ const checks = [
   {
     id: "petpack",
     run: () => {
-      const petJson = join(ROOT, "pets/kimi-robot/pet.json");
-      const spritesheet = join(ROOT, "pets/kimi-robot/spritesheet.webp");
+      const petJson = join(ROOT, "pets/kimi-block/pet.json");
+      const spritesheet = join(ROOT, "pets/kimi-block/spritesheet.webp");
       if (!existsSync(petJson)) {
         return {
           level: "fail",
           message: "default petpack missing (pet.json)",
-          fix: "Check pets/kimi-robot/ directory",
+          fix: "Check pets/kimi-block/ directory",
         };
       }
       if (!existsSync(spritesheet)) {
         return {
           level: "fail",
           message: "default petpack missing (spritesheet.webp)",
-          fix: "Check pets/kimi-robot/ directory",
+          fix: "Check pets/kimi-block/ directory",
         };
       }
       // Try running validate-petpack.mjs if dist exists
