@@ -1,6 +1,8 @@
-import type { BrowserWindow as BrowserWindowType } from "electron";
+import type { BrowserWindow as BrowserWindowType, Rectangle } from "electron";
+import { loadSettings, saveSettings, updateDesktopSettings } from "./settings";
+import type { KimiPetSettings } from "./settings";
 
-const { app, BrowserWindow, ipcMain, Menu, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, Menu, shell, screen } = require("electron");
 const { exec, spawn } = require("node:child_process");
 const path = require("node:path");
 
@@ -9,34 +11,71 @@ const DAEMON_URL = `http://127.0.0.1:${DAEMON_PORT}`;
 
 let mainWindow: BrowserWindowType | null = null;
 
-function focusVSCode() {
+function focusKimiCli() {
   if (process.platform !== "win32") {
-    spawn("code", ["."], { detached: true, stdio: "ignore" });
+    spawn("kimi", [], { detached: true, stdio: "ignore" });
     return;
   }
   const ps = `
-    $code = Get-Process | Where-Object { $_.MainWindowTitle -like '*Visual Studio Code*' } | Select-Object -First 1
-    if ($code) {
-      $hwnd = $code.MainWindowHandle
+    $kimi = Get-Process | Where-Object {
+      ($_.MainWindowTitle -like '*Kimi*' -or $_.ProcessName -like '*kimi*') -and $_.MainWindowHandle -ne 0
+    } | Select-Object -First 1
+    if ($kimi) {
+      $hwnd = $kimi.MainWindowHandle
       Add-Type @'
         using System;
         using System.Runtime.InteropServices;
         public class Win32 {
           [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
           [DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+          [DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hWnd);
         }
 '@
-      [Win32]::ShowWindowAsync($hwnd, 9)
-      [Win32]::SetForegroundWindow($hwnd)
+      if ([Win32]::IsIconic($hwnd)) {
+        [Win32]::ShowWindowAsync($hwnd, 9) | Out-Null
+      }
+      [Win32]::SetForegroundWindow($hwnd) | Out-Null
     } else {
-      Start-Process code -ArgumentList '.'
+      Write-Error 'No Kimi Code CLI window found'
     }
   `;
   exec(ps, { shell: "powershell.exe" }, (err: any) => {
     if (err) {
-      spawn("code", ["."], { detached: true, stdio: "ignore" });
+      showBubble("未找到 Kimi Code CLI 窗口");
     }
   });
+}
+
+// ─── Window geometry helpers ─────────────────────────────────────
+
+const BASE_SIZE = 256;
+const MARGIN = 24;
+
+/** Calculate window size from scale and state-text visibility. */
+function getWindowSize(scale: number, _showStateText: boolean): { width: number; height: number } {
+  // State text is overlay (absolute positioned) — no extra height needed.
+  // _showStateText is reserved for future use if text becomes non-overlay.
+  const size = Math.round(BASE_SIZE * scale);
+  return { width: size, height: size };
+}
+
+/** Check if a rectangle intersects any display's work area. */
+function isOnAnyScreen(x: number, y: number, width: number, height: number): boolean {
+  const displays = screen.getAllDisplays();
+  return displays.some((d: any) => {
+    const wa = d.workArea;
+    return x < wa.x + wa.width && x + width > wa.x && y < wa.y + wa.height && y + height > wa.y;
+  });
+}
+
+/** Default position: primary display bottom-right corner. */
+function getDefaultPosition(width: number, height: number): { x: number; y: number } {
+  const primary = screen.getPrimaryDisplay();
+  const wa = primary.workArea;
+  return {
+    x: wa.x + wa.width - width - MARGIN,
+    y: wa.y + wa.height - height - MARGIN,
+  };
 }
 
 async function postState(state: string, message?: string) {
@@ -87,9 +126,14 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
+      backgroundThrottling: false,
     },
   });
   mainWindow = win;
+
+  // Keep the pet above system overlays (e.g. Snipping Tool) and prevent throttling.
+  win.setAlwaysOnTop(true, "screen-saver");
+  win.setVisibleOnAllWorkspaces(true);
 
   const html = `
 <!DOCTYPE html>
@@ -389,19 +433,26 @@ init();
   });
 
   ipcMain.on("show-context-menu", () => {
+    const stateItem = (state: string) => ({
+      label: state,
+      click: () => { postState(state); showBubble(`状态: ${state}`); },
+    });
     const menu = Menu.buildFromTemplate([
       {
-        label: "聚焦 Kimi Code (VS Code)",
-        click: () => focusVSCode(),
+        label: "聚焦 Kimi Code CLI",
+        click: () => focusKimiCli(),
       },
       { type: "separator" },
       {
         label: "状态",
         submenu: [
-          { label: "idle", click: () => { postState("idle"); showBubble("状态: idle"); } },
-          { label: "thinking", click: () => { postState("thinking"); showBubble("状态: thinking"); } },
-          { label: "success", click: () => { postState("success"); showBubble("状态: success"); } },
-          { label: "error", click: () => { postState("error"); showBubble("状态: error"); } },
+          stateItem("idle"),
+          stateItem("thinking"),
+          stateItem("tool_use"),
+          stateItem("editing"),
+          stateItem("waiting_approval"),
+          stateItem("success"),
+          stateItem("error"),
         ],
       },
       { type: "separator" },
