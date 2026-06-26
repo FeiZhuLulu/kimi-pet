@@ -6,9 +6,10 @@
 
 ## 功能特性
 
-- **实时状态动画** — idle、thinking、tool_use、editing、terminal、waiting_approval、success、error
+- **实时状态动画** — idle、thinking、tool_use、editing、waiting_approval、success、error
 - **生命周期 hook 集成** — 通过 `~/.kimi-code/config.toml` 监听 Kimi Code CLI 事件
-- **桌面伴侣** — 无边框、透明、可拖动、可缩放的 Electron 窗口
+- **桌面伴侣** — 无边框、透明、可拖动、可缩放的 Electron 窗口；位置、缩放、状态文字、置顶等设置持久化到 `~/.kimi-pet/settings.json`
+- **右键菜单** — 聚焦 Kimi Code CLI、Scale 预设（75%–200%）、显示/隐藏状态文字、窗口置顶、重置位置、手动状态切换
 - **Web 预览** — 浏览器打开 `apps/web-preview` 即可快速演示
 - **VS Code 侧边面板** — 🧪 experimental，当前不作为主接入目标（见下方说明）
 - **MCP 服务器** — 暴露 `pet_set_state`、`pet_say`、`pet_notify` 工具
@@ -75,6 +76,8 @@ node scripts/start-pet.mjs
 或在 Windows 上双击项目根目录的 `start-pet.bat`。
 
 脚本会按需启动 daemon（默认端口 `17373`）并打开 Electron 透明桌宠窗口。
+
+桌面端的配置（窗口位置、缩放、是否显示状态文字、是否置顶）会保存在 `~/.kimi-pet/settings.json`。删除该文件即可恢复默认设置。
 
 > 未来 Kimi Code CLI 支持自定义 slash command 后，`/pet` 命令（已安装到 `~/.kimi-code/commands/pet.md`）会自动生效。
 
@@ -282,10 +285,13 @@ pnpm config set registry https://registry.npmjs.org
 
 ### 常见错误
 
+- `/start pet` 没反应或启动后没窗口 → 结束残留 `electron` / `pet-daemon` 进程后再试
+- 截图后桌宠消失 → 右键 **Reset Position** 或关闭 **Always on Top** 后重新置顶
+- 窗口飞出屏幕 / 换显示器后找不到 → 右键 **Reset Position**，或删除 `~/.kimi-pet/settings.json`
 - `doctor` 报 `dist/*.js` 缺失 → 跑 `pnpm build`
 - `pnpm install` 阶段卡住或 Electron 404 → 见上"国内镜像"
 - `doctor` 报端口 17373 被占 → Windows: `netstat -ano | findstr 17373`；macOS / Linux: `lsof -iTCP:17373 -sTCP:LISTEN`，找到 PID 后结束进程
-- `/pet` 在 Kimi 聊天里不出现 → 跑 `install-slash-command.mjs` 后重启 Kimi Code 客户端
+- `/pet` 在 Kimi 聊天里不出现 → 当前公开版还不支持自定义 slash command，请先用 `/start pet` 启动
 - Kimi config 路径 `~/.kimi-code/config.toml`（或 `$KIMI_CODE_HOME/config.toml`）不存在 → 先启动一次 Kimi Code CLI 让它生成配置目录
 
 ## 路线图
@@ -293,6 +299,8 @@ pnpm config set registry https://registry.npmjs.org
 - [ ] Linux / macOS 桌面体验打磨
 - [ ] 更多内置桌宠
 - [ ] 打包安装器 / GitHub Releases
+
+版本历史见 [CHANGELOG.md](docs/CHANGELOG.md)。
 
 ### Experimental — 等待 Kimi 更新 VS Code 插件后恢复
 

@@ -37,6 +37,10 @@ codexSKILL.md
 docs/FINAL_REPORT.md
 docs/assets/母版图片.png
 
+# Local source/planning directories not meant to be committed
+/形象/
+/docs/superpowers/
+
 # Old robot screenshots no longer referenced by README
 docs/assets/editing.png
 docs/assets/error.png
