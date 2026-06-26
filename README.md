@@ -2,7 +2,7 @@
 
 一个常驻桌面顶层的透明桌宠，监听你的 [Kimi Code](https://kimi.moonshot.cn/) 编程会话并实时反应。
 
-![success](docs/assets/success.png)
+![kimi-block-preview](docs/assets/kimi-block-preview.png)
 
 ## 功能特性
 
@@ -12,7 +12,7 @@
 - **Web 预览** — 浏览器打开 `apps/web-preview` 即可快速演示
 - **VS Code 侧边面板** — 🧪 experimental，当前不作为主接入目标（见下方说明）
 - **MCP 服务器** — 暴露 `pet_set_state`、`pet_say`、`pet_notify` 工具
-- **`/pet` slash 命令** — 在 Kimi Code 聊天里一键启动 daemon + 桌宠
+- **`/start pet` skill / `start-pet.bat`** — 在当前 Kimi Code CLI 一键启动 daemon + 桌宠（`/pet` slash 命令等官方支持自定义命令后自动生效）
 
 > **支持路径说明：** 当前主支持路径是 Kimi Code CLI。VS Code companion 暂为实验功能，不作为主接入目标；由于官方 Kimi Code for VS Code 插件版本较旧，相关适配等官方更新后再继续。
 
