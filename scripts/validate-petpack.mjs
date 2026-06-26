@@ -6,7 +6,10 @@ import { validatePetPack } from "../packages/pet-assets/dist/index.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, "..");
 
-const petDir = path.join(projectRoot, "pets", "kimi-robot");
+const arg = process.argv[2];
+const petDir = arg
+  ? path.resolve(arg)
+  : path.join(projectRoot, "pets", "kimi-robot");
 
 const result = await validatePetPack(petDir);
 
