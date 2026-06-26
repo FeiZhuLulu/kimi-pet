@@ -31,4 +31,26 @@ tmp
 # User-specific Kimi configs (we provide install scripts instead)
 .kimi/config.toml
 .kimi-code/config.toml
+
+# Legacy / personal files not part of the core project
 codexSKILL.md
+docs/FINAL_REPORT.md
+docs/assets/母版图片.png
+
+# Old robot screenshots no longer referenced by README
+docs/assets/editing.png
+docs/assets/error.png
+docs/assets/ide.png
+docs/assets/listening.png
+docs/assets/success.png
+docs/assets/terminal.png
+docs/assets/thinking.png
+docs/assets/tool.png
+docs/assets/waiting approval.png
+
+# Generated intermediate assets
+assets/kimi-robot/source-normalized/
+
+# Old unused scripts
+scripts/build_spritesheet.py
+scripts/process_idle.py
