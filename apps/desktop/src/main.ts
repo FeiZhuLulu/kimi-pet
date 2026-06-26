@@ -497,21 +497,33 @@ init();
     scheduleSavePosition();
   });
 
-  // ─── Scale (interactive, not yet persisted) ────────────────────
+  // ─── Scale persistence ─────────────────────────────────────────
 
   let currentScale = scale;
+  const MIN_SCALE = 0.5;
+  const MAX_SCALE = 2.0;
+
+  function applyScale(newScale: number) {
+    currentScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, Number(newScale.toFixed(2))));
+    const { width: w, height: h } = getWindowSize(currentScale, loadSettings().desktop.showStateText);
+    win.setSize(w, h);
+    win.webContents.send("set-scale", currentScale);
+    ensureVisible();
+  }
+
   let resizeBaseScale = currentScale;
-  const MIN_SCALE = 0.5, MAX_SCALE = 2.0;
+  let saveScaleTimer: ReturnType<typeof setTimeout> | null = null;
   ipcMain.on("window-resize-start", () => {
     resizeBaseScale = currentScale;
   });
   ipcMain.on("window-resize-move", (_ev: any, dx: number, dy: number) => {
     const delta = (dx + dy) / 2;
-    currentScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, resizeBaseScale + delta / 400));
-    currentScale = Number(currentScale.toFixed(2));
-    const size = Math.round(256 * currentScale);
-    win.setSize(size, size);
-    win.webContents.send("set-scale", currentScale);
+    const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, resizeBaseScale + delta / 400));
+    applyScale(newScale);
+    if (saveScaleTimer) clearTimeout(saveScaleTimer);
+    saveScaleTimer = setTimeout(() => {
+      updateDesktopSettings({ scale: currentScale });
+    }, 300);
   });
 
   // ─── Context menu ──────────────────────────────────────────────
