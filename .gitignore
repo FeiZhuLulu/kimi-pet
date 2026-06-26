@@ -31,3 +31,4 @@ tmp
 # User-specific Kimi configs (we provide install scripts instead)
 .kimi/config.toml
 .kimi-code/config.toml
+codexSKILL.md
