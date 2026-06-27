@@ -65,7 +65,15 @@ node scripts/install-plugin.mjs
 /start pet
 ```
 
-agent 会读取 `plugins/kimi-pet/skills/start-pet/SKILL.md`，自动运行启动命令。
+agent 会读取 `~/.kimi-code/plugins/kimi-pet/skills/start-pet/SKILL.md`，自动运行启动命令。
+
+如果 `/start pet` 没有触发，说明 skill 还没安装到 Kimi Code plugin 目录，运行：
+
+```bash
+node scripts/install-plugin.mjs
+```
+
+该脚本会把 `plugins/kimi-pet/` 复制到 `~/.kimi-code/plugins/kimi-pet/`，并把 `<PROJECT_ROOT>` 自动替换为当前仓库路径。
 
 ### 方式 2：直接运行启动脚本
 

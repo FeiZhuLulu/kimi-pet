@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.4.2 — skill install portability
+
+- Fixed hardcoded absolute path in `plugins/kimi-pet/skills/start-pet/SKILL.md`.
+- Updated `scripts/install-plugin.mjs` to substitute `<PROJECT_ROOT>` in skill markdown files, so the skill works after cloning the repo to any location.
+- Added README note about running `node scripts/install-plugin.mjs` when `/start pet` is not available.
+
+Verified by cloning the GitHub repo to a temporary directory and running `install-plugin.mjs`; the installed skill correctly pointed to the clone path.
+
 ## v0.4.1 — hook config hotfix
 
 - Removed unsupported hook events (`PermissionRequest`, `PermissionResult`, `Interrupt`) from `install-hooks.mjs`. These events caused `kimi doctor` to fail with `hooks[15]: Invalid input` because Kimi Code does not recognize them.
