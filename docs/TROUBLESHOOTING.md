@@ -4,6 +4,25 @@
 
 ---
 
+## `kimi doctor` 报 `config.toml` 无效 / `hooks[N]: Invalid input`
+
+这是旧版 `kimi-pet` 的 hooks 安装脚本写入了 Kimi Code 不支持的 hook 事件（`PermissionRequest`、`PermissionResult`、`Interrupt`）和 `timeout` 字段导致的。
+
+**修复步骤：**
+
+1. 先按你之前的方式，用备份恢复 `~/.kimi-code/config.toml`，让 Kimi Code 能正常启动。
+2. 拉取最新代码后重新安装 hooks：
+
+   ```bash
+   node scripts/install-hooks.mjs
+   ```
+
+3. 再次运行 `kimi doctor`，确认配置验证通过。
+
+如果你不想覆盖自己的 config 备份，也可以手动删除 config.toml 里所有 `event = "PermissionRequest"`、`PermissionResult`、`Interrupt` 的 hook 块，以及每个 hook 里的 `timeout = 1` 行。
+
+---
+
 ## `/start pet` 没反应，或启动后没有任何窗口
 
 最常见原因是上次启动的 Electron / pet-daemon 进程还在后台，新实例无法创建窗口。

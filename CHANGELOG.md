@@ -1,5 +1,42 @@
 # Changelog
 
+## v0.4.1 — hook config hotfix
+
+- Removed unsupported hook events (`PermissionRequest`, `PermissionResult`, `Interrupt`) from `install-hooks.mjs`. These events caused `kimi doctor` to fail with `hooks[15]: Invalid input` because Kimi Code does not recognize them.
+- Removed `timeout = 1` from generated hook entries; current Kimi Code schema rejects the `timeout` field on hooks.
+- Updated `doctor.mjs` to warn about unsupported hook events and about any `timeout` field still present in existing installs.
+
+If you previously ran `install-hooks.mjs` and Kimi Code started failing validation, re-run:
+
+```bash
+node scripts/install-hooks.mjs
+```
+
+This will rewrite only the kimi-pet hooks (preserving your other hooks) and remove the invalid entries.
+
+## v0.4.0 — desktop experience polish
+
+### Added
+
+- **Desktop settings persistence**: window position, scale, state-text visibility, and always-on-top are saved to `~/.kimi-pet/settings.json` and restored on startup.
+- **Window position protection**: on launch the window is checked against current display work areas; if it is off-screen (e.g. after a display change), it snaps back to the primary display bottom-right corner.
+- **Scale presets**: right-click menu provides 75%, 100%, 125%, 150%, and 200% scale options.
+- **Right-click toggles**: Show State Text, Always on Top, and Reset Position.
+- **Interactive scale handle**: drag the circular resize handle to scale the pet in real time; scale is saved after the drag ends.
+- **Corrupt settings fallback**: if `settings.json` is malformed, it is backed up and defaults are used.
+
+### Changed
+
+- Right-click state menu now lists `idle`, `thinking`, `tool_use`, `editing`, `waiting_approval`, `success`, `error` (manual `terminal` entry removed).
+- Improved topmost-window survival against system overlays such as Snipping Tool.
+- Lowered `terminal` animation FPS from 10 to 6.
+
+### Fixed
+
+- Transparent Electron window disappearing after screenshots.
+- Window position being lost between sessions.
+- Scale changes not persisting.
+
 ## v0.3.0 — install/config safety + lightweight diagnostics
 
 **Safe hooks install/uninstall**

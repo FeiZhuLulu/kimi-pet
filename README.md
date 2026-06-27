@@ -300,7 +300,7 @@ pnpm config set registry https://registry.npmjs.org
 - [ ] 更多内置桌宠
 - [ ] 打包安装器 / GitHub Releases
 
-版本历史见 [CHANGELOG.md](docs/CHANGELOG.md)。
+版本历史见 [CHANGELOG.md](CHANGELOG.md)。
 
 ### Experimental — 等待 Kimi 更新 VS Code 插件后恢复
 

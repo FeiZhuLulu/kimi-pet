@@ -248,13 +248,13 @@ export function buildKimiPetHooks(format, events, hookCommand) {
     return events
       .map(
         (event) =>
-          `[[hooks]]\nevent = "${event}"\ncommand = "${hookCommand}"\ntimeout = 1`
+          `[[hooks]]\nevent = "${event}"\ncommand = "${hookCommand}"`
       )
       .join("\n\n");
   }
   // inline (default for new installs)
   const entries = events.map(
-    (event) => `  { event = "${event}", command = "${hookCommand}", timeout = 1 }`
+    (event) => `  { event = "${event}", command = "${hookCommand}" }`
   );
   return `hooks = [\n${entries.join(",\n")}\n]`;
 }

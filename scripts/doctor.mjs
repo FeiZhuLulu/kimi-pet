@@ -125,11 +125,22 @@ function extractCommandPath(command) {
 
 // ─── Checks ─────────────────────────────────────────────────────
 
-const REQUIRED_HOOK_EVENTS = [
-  "PermissionRequest",
-  "PermissionResult",
-  "Interrupt",
-];
+const SUPPORTED_HOOK_EVENTS = new Set([
+  "SessionStart",
+  "SessionEnd",
+  "UserPromptSubmit",
+  "PreToolUse",
+  "PostToolUse",
+  "PostToolUseFailure",
+  "SubagentStart",
+  "SubagentStop",
+  "PreCompact",
+  "PostCompact",
+  "Stop",
+  "StopFailure",
+  "Notification",
+]);
+const REQUIRED_HOOK_EVENTS = Array.from(SUPPORTED_HOOK_EVENTS);
 
 const checks = [
   {
@@ -292,12 +303,16 @@ const checks = [
       const kpHooks = getKimiPetHooks(content);
       const registered = new Set(kpHooks.map((h) => h.event));
       const missing = REQUIRED_HOOK_EVENTS.filter((e) => !registered.has(e));
-      if (missing.length === 0) {
+      const unsupported = Array.from(registered).filter((e) => !SUPPORTED_HOOK_EVENTS.has(e));
+      if (missing.length === 0 && unsupported.length === 0) {
         return { level: "ok", message: `hook events complete (${registered.size} events)` };
       }
+      const issues = [];
+      if (missing.length > 0) issues.push(`missing ${missing.join(", ")}`);
+      if (unsupported.length > 0) issues.push(`unsupported ${unsupported.join(", ")}`);
       return {
         level: "warn",
-        message: `hooks outdated: missing ${missing.join(", ")}`,
+        message: `hooks outdated: ${issues.join("; ")}`,
         fix: "node scripts/install-hooks.mjs",
       };
     },
@@ -312,17 +327,13 @@ const checks = [
         return { level: "ok", message: "skipped (no kimi-pet hooks)" };
       }
       const kpHooks = getKimiPetHooks(content);
-      const bad = kpHooks.filter((h) => h.timeout !== undefined && h.timeout !== 1);
-      const noTimeout = kpHooks.filter((h) => h.timeout === undefined);
-      if (bad.length === 0 && noTimeout.length === 0) {
-        return { level: "ok", message: "all kimi-pet hooks have timeout = 1" };
+      const withTimeout = kpHooks.filter((h) => h.timeout !== undefined);
+      if (withTimeout.length === 0) {
+        return { level: "ok", message: "kimi-pet hooks have no timeout field" };
       }
-      const issues = [];
-      if (bad.length > 0) issues.push(`${bad.length} with timeout != 1`);
-      if (noTimeout.length > 0) issues.push(`${noTimeout.length} without timeout`);
       return {
         level: "warn",
-        message: `hook timeout: ${issues.join(", ")}`,
+        message: `${withTimeout.length} kimi-pet hooks still have a timeout field`,
         fix: "node scripts/install-hooks.mjs",
       };
     },
