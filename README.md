@@ -1,3 +1,5 @@
+[English](./README.en.md) | **简体中文**
+
 # Kimi Pet 🐾
 
 一个常驻桌面顶层的透明桌宠，监听你的 [Kimi Code](https://kimi.moonshot.cn/) 编程会话并实时反应。
