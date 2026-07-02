@@ -205,7 +205,7 @@ pnpm validate:petpack
 通过环境变量指定：
 
 ```powershell
-$env:KIMI_PET_PETPACK="E:\项目库\桌宠项目\pets\kimi-robot"
+$env:KIMI_PET_PETPACK="E:\path\to\kimi-pet\pets\kimi-robot"
 node scripts/start-pet.mjs
 ```
 
